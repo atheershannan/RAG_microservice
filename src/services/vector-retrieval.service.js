@@ -8,7 +8,7 @@ let defaultAccessControlPromise = null;
 async function resolveDefaultPrisma() {
   if (!defaultPrismaPromise) {
     const module = await import('../config/database.config.js');
-    defaultPrismaPromise = module.prisma;
+    defaultPrismaPromise = Promise.resolve(module.prisma);
   }
 
   return defaultPrismaPromise;
@@ -34,19 +34,23 @@ async function resolveDefaultAccessControl() {
 
 class VectorRetrievalService {
   constructor({
-    prismaClient = null,
-    redisClient = null,
-    accessControlService = null,
+    prismaClient = undefined,
+    redisClient = undefined,
+    accessControlService = undefined,
     logger = defaultLogger,
     cacheTTLSeconds = 300,
   } = {}) {
-    this.prismaProvider = prismaClient
+    const hasCustomPrisma = prismaClient !== undefined;
+    const hasCustomRedis = redisClient !== undefined;
+    const hasCustomAccessControl = accessControlService !== undefined;
+
+    this.prismaProvider = hasCustomPrisma
       ? () => Promise.resolve(prismaClient)
       : () => resolveDefaultPrisma();
-    this.redisProvider = redisClient
+    this.redisProvider = hasCustomRedis
       ? () => Promise.resolve(redisClient)
       : () => resolveDefaultRedis();
-    this.accessControlProvider = accessControlService
+    this.accessControlProvider = hasCustomAccessControl
       ? () => Promise.resolve(accessControlService)
       : () => resolveDefaultAccessControl();
     this.logger = logger;

@@ -160,13 +160,11 @@ describe('VectorRetrievalService', () => {
 
       expect(prismaMock.vectorEmbedding.findMany).toHaveBeenCalled();
       expect(accessControlMock.evaluatePolicies).toHaveBeenCalledTimes(2);
-      expect(redisMock.setex).toHaveBeenCalledWith(
-        expect.stringContaining(`vector:${tenantId}`),
-        60,
-        JSON.stringify([
-          expect.objectContaining({ id: 'vec-1' }),
-        ])
-      );
+      expect(redisMock.setex).toHaveBeenCalled();
+      const [cacheKey, ttl, payload] = redisMock.setex.mock.calls[0];
+      expect(cacheKey).toContain(`vector:${tenantId}`);
+      expect(ttl).toBe(60);
+      expect(payload).toContain('vec-1');
       expect(results).toHaveLength(1);
       expect(results[0].id).toBe('vec-1');
     });
