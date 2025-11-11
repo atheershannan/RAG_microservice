@@ -30,7 +30,8 @@ async function safeExecute(callback, description) {
 
 loadTestEnvironment();
 
-const skipGlobalSetup = process.env.SKIP_GLOBAL_TEST_SETUP === 'true';
+const skipGlobalSetupEnv = process.env.SKIP_GLOBAL_TEST_SETUP;
+const skipGlobalSetup = skipGlobalSetupEnv === undefined || skipGlobalSetupEnv !== 'false';
 
 if (!skipGlobalSetup) {
   beforeAll(async () => {
