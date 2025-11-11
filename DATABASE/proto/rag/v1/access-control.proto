@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package rag.v1;
+
+// Access Control service (stub)
+service AccessControlService {
+  rpc CheckPermission(PermissionRequest) returns (PermissionResponse);
+}
+
+message PermissionRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+  string resource_type = 3;
+  string resource_id = 4;
+  string permission = 5;
+}
+
+message PermissionResponse {
+  bool allowed = 1;
+  string reason = 2;
+}
+
+
+

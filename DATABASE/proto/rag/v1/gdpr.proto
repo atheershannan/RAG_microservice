@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package rag.v1;
+
+// GDPR service (stub)
+service GDPRService {
+  rpc DeleteUserData(DeleteRequest) returns (DeleteResponse);
+  rpc ExportUserData(ExportRequest) returns (ExportResponse);
+}
+
+message DeleteRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+}
+
+message DeleteResponse {
+  bool success = 1;
+}
+
+message ExportRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+}
+
+message ExportResponse {
+  bytes data = 1;
+}
+
+
+

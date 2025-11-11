@@ -1,163 +1,25 @@
-# 📋 STAGE 01: REQUIREMENTS & PLANNING TEMPLATE
+# Stage 01 — Requirements & Planning (Adaptive)
 
-> **Generate project requirements and planning documents**
+## Intent
+Establish clear users, goals, constraints, and success metrics. Enforce adaptive questioning.
 
----
+## Context Scan
+- Read: ROADMAP.md, PROJECT_EVOLUTION_LOG.md, FEATURES_REGISTRY.md, GLOBAL_LOG.md
+- Detect: Missing/outdated/conflicts
 
-## 🔍 ENTRY QUESTIONNAIRE
+## Adaptive Questions
+- Ask only for missing or conflicting details:
+  - Target users, primary jobs-to-be-done
+  - Non-functionals (SLOs, latency, scale, compliance)
+  - Risks and constraints (budget, timeline)
+  - Success metrics (KPIs, OKRs)
 
-**BEFORE generating any content, answer these questions:**
+## Outputs
+- Updated user types, goals, constraints, metrics
+- Save Q/A transcript to ./SESSION_LOGS/{{TIMESTAMP}}_requirements_session.md
+- Append decision summary to PROJECT_EVOLUTION_LOG.md
 
-### Project Overview
-1. **What is the name of your project?**
-   - Example: "E-commerce Marketplace"
+## Unlock Condition
+- `CHECKLIST.md` satisfied and approved
 
-2. **What problem does this project solve?**
-   - Be specific about the pain point
-   - Example: "Small businesses need a platform to sell products online without technical expertise"
-
-3. **Who is the target audience?**
-   - Specific user groups
-   - Demographics if relevant
-   - Example: "Small business owners, age 25-55, non-technical"
-
-4. **What are the MUST-HAVE features (MVP)?**
-   - List 3-5 critical features
-   - Be specific, not vague
-   - Example: "User can create account, upload products, process payments"
-
-5. **What are NICE-TO-HAVE features (for later)?**
-   - Features that enhance but aren't essential
-   - Example: "Advanced analytics, social media integration"
-
-6. **What are the technical constraints?**
-   - Budget limitations
-   - Timeline constraints
-   - Team size/expertise
-   - Example: "Budget: $0 (open source stack only), Timeline: 3 months"
-
-7. **Will this project have user authentication?**
-   - Yes/No
-   - If yes, what type?
-   - Example: "Yes, JWT-based auth with email/password"
-
-8. **What data will be stored?**
-   - Main entities
-   - Example: "User profiles, Products, Orders, Payments"
-
-9. **Will this project handle payments?**
-   - Yes/No
-   - If yes, what payment methods?
-   - Example: "Yes, credit card processing via Stripe"
-
-10. **What devices should this support?**
-    - Desktop only
-    - Mobile responsive
-    - Native mobile apps
-    - Example: "Responsive web app (desktop + mobile)"
-
----
-
-## 📝 TEMPLATE GENERATION INSTRUCTIONS
-
-Based on your answers, generate:
-
-### 1. Requirements Document
-**File:** `requirements.md`
-
-Structure:
-```markdown
-# Project Requirements
-
-## Project Overview
-- **Name:** [From Q1]
-- **Problem Statement:** [From Q2]
-- **Target Audience:** [From Q3]
-- **Timeline:** [From Q6]
-
-## MVP Features (Must-Have)
-1. [Feature from Q4.1]
-2. [Feature from Q4.2]
-3. [Feature from Q4.3]
-4. [Feature from Q4.4]
-5. [Feature from Q4.5]
-
-## Future Features (Nice-to-Have)
-1. [Feature from Q5.1]
-2. [Feature from Q5.2]
-...
-
-## Technical Constraints
-- [Constraint from Q6]
-...
-
-## Success Criteria
-- [How will you measure success]
-...
-```
-
-### 2. Stakeholder Summary
-**File:** `stakeholders.md`
-
-Include:
-- Primary stakeholders
-- Decision makers
-- End users
-- Technical team
-
-### 3. Assumptions Document
-**File:** `assumptions.md`
-
-List assumptions about:
-- User behavior
-- Technical environment
-- Business context
-
-### 4. Constraints & Risks
-**File:** `constraints_and_risks.md`
-
-Document:
-- Technical constraints
-- Budget constraints
-- Timeline risks
-- Technical risks
-
----
-
-## ✅ VALIDATION CHECKLIST
-
-Before proceeding to Stage 02, verify:
-- [ ] Requirements document is complete
-- [ ] All MVP features clearly defined
-- [ ] Target audience specified
-- [ ] Success criteria established
-- [ ] Constraints documented
-- [ ] Assumptions listed
-- [ ] Entry questions answered
-
----
-
-## 🔄 PSEUDO-CODE DIALOGUE
-
-Generate a conversation between:
-- **Architect:** "Based on these requirements, we need to consider [technical decision]"
-- **Product Owner:** "Yes, but also we must ensure [business requirement]"
-- **Team Lead:** "Given constraints, I suggest [approach]"
-
-**Purpose:** Surface hidden requirements and validate approach
-
----
-
-## 🚦 NEXT STAGE
-
-Once requirements are complete and validated:
-→ Proceed to **Stage 02: System & Architecture**
-
-**Unlock Condition:** All checklist items in `CHECKLIST.md` must be ✅
-
----
-
-**Template Version:** 1.0.0  
-**Stage:** 01/09  
-**Next:** Stage 02 - System & Architecture
 

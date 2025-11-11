@@ -1,44 +1,11 @@
-# 🧪 STAGE 05: FRONTEND TDD PLAN TEMPLATE
+# Stage 05 — Frontend TDD Plan
 
-> **Define frontend test strategy BEFORE implementation**
+## Process
+- Define unit, component, and e2e test strategies.
+- Mock API and state; coverage ≥80%.
 
----
+## Output
+- Test specs plan and coverage gates
+- Review criteria
 
-## 📋 FRONTEND TEST PYRAMID
-
-### Unit Tests
-- **Target:** Individual components, hooks, utilities
-- **Tool:** Jest + React Testing Library
-- **Coverage:** Component logic, calculations
-
-### Integration Tests
-- **Target:** Component interactions
-- **Tool:** Testing Library queries
-- **Coverage:** Form flows, user interactions
-
-### E2E Tests
-- **Target:** Full user flows
-- **Tool:** Playwright / Cypress
-- **Coverage:** Critical paths only
-
----
-
-## 🎯 TEST COVERAGE TARGET
-
-**Minimum:** 80% component coverage  
-**Critical Components:** 100% coverage
-
----
-
-## ✅ VALIDATION
-
-- [ ] Unit test strategy defined
-- [ ] Integration test strategy defined
-- [ ] E2E test scenarios planned
-- [ ] Coverage targets set
-
----
-
-**File Output:** `frontend_tdd_plan.md`  
-**Next:** Proceed to Stage 06
 

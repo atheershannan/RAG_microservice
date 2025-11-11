@@ -1,128 +1,63 @@
-# 🔄 CI/CD PIPELINE - GitHub Actions
-
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
-  # Backend Tests
-  backend-tests:
+  build-test-deploy:
     runs-on: ubuntu-latest
-    
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
-      
-      - name: Install Dependencies
-        working-directory: ./backend
+          node-version: '20'
+
+      - name: Install
         run: npm ci
-      
-      - name: Run Linter
-        working-directory: ./backend
-        run: npm run lint
-      
-      - name: Run Tests
-        working-directory: ./backend
-        run: npm test
-      
-      - name: Check Coverage
-        working-directory: ./backend
-        run: npm run test:coverage
+
+      - name: Lint
+        run: npm run lint --workspaces --if-present
+
+      - name: Build
+        run: npm run build --workspaces --if-present
+
+      - name: Test
         env:
           CI: true
+        run: npm test --workspaces --if-present -- --coverage --watch=false
 
-  # Frontend Tests
-  frontend-tests:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      
-      - name: Install Dependencies
-        working-directory: ./frontend
-        run: npm ci
-      
-      - name: Run Linter
-        working-directory: ./frontend
-        run: npm run lint
-      
-      - name: Run Tests
-        working-directory: ./frontend
-        run: npm test
-      
-      - name: Check Coverage
-        working-directory: ./frontend
-        run: npm run test:coverage
+      - name: Enforce Coverage >= 80%
+        run: |
+          node -e "const fs=require('fs');
+          const p=['coverage/coverage-summary.json','coverage/combined-summary.json'].find(fs.existsSync);
+          if(!p){console.error('No coverage summary found');process.exit(1)}
+          const s=JSON.parse(fs.readFileSync(p,'utf8'));
+          const pct=(s.total.lines.pct||s.total.lines.covered*100/s.total.lines.total);
+          if(pct<80){console.error('Coverage below 80%:',pct);process.exit(1)}
+          console.log('Coverage OK:',pct)" 
+
+      - name: Deploy
+        if: github.ref == 'refs/heads/main' && success()
         env:
-          CI: true
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          echo "Deploying with env-only secrets..."
+          # insert deploy command using $DEPLOY_TOKEN and environment config
 
-  # Build Check
-  build-check:
-    runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-tests]
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      
-      - name: Build Backend
-        working-directory: ./backend
-        run: npm run build
-      
-      - name: Build Frontend
-        working-directory: ./frontend
-        run: npm run build
+      - name: Smoke Tests
+        if: github.ref == 'refs/heads/main' && success()
+        run: npm run smoke --workspaces --if-present
 
-  # E2E Tests
-  e2e-tests:
-    runs-on: ubuntu-latest
-    needs: [build-check]
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      
-      - name: Run E2E Tests
-        run: npm run test:e2e
-      
-  # Deploy (Only on main branch)
-  deploy:
-    runs-on: ubuntu-latest
-    needs: [e2e-tests]
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Deploy Backend
-        # Add your deployment commands here
-        run: echo "Deploying backend..."
-      
-      - name: Deploy Frontend
-        # Add your deployment commands here
-        run: echo "Deploying frontend..."
-      
-      - name: Run Smoke Tests
-        run: npm run test:smoke
+      - name: Rollback if Smoke Fails
+        if: github.ref == 'refs/heads/main' && failure()
+        run: |
+          echo "Smoke tests failed; initiating rollback..."
+          # insert rollback command
+
 

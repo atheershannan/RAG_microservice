@@ -1,88 +1,11 @@
-# ☁️ STAGE 09: CLOUD CONFIGURATION TEMPLATE
+# Stage 09 — Cloud Config Template
 
-> **Configure cloud infrastructure and deployment**
+## Environment
+- Use environment variables only (no secrets committed).
+- Define staging and production configs.
 
----
+## Outputs
+- Infra parameters and service endpoints (placeholders)
+- Linked in `PROJECT_EVOLUTION_LOG.md`
 
-## 📋 GENERATION INSTRUCTIONS
-
-Generate cloud configuration based on hosting choice.
-
----
-
-## 🎯 AWS DEPLOYMENT EXAMPLE
-
-### Backend Deployment (AWS Elastic Beanstalk / EC2)
-
-```bash
-# eb init
-# eb create environment-name
-# eb deploy
-```
-
-**Config:** `.elasticbeanstalk/config.yml`
-
-### Frontend Deployment (AWS S3 + CloudFront)
-
-```bash
-# Build frontend
-cd frontend && npm run build
-
-# Deploy to S3
-aws s3 sync dist/ s3://your-bucket-name --delete
-
-# Invalidate CloudFront
-aws cloudfront create-invalidation --distribution-id DIST_ID --paths "/*"
-```
-
----
-
-## 🎯 VERCEL DEPLOYMENT (Frontend + Serverless Functions)
-
-```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Deploy
-vercel --prod
-```
-
-**Config:** `vercel.json`
-
----
-
-## 🎯 Railway / RENDER.COM (Easier Alternative)
-
-Just connect GitHub repo and auto-deploy on push!
-
----
-
-## 📝 ENVIRONMENT VARIABLES
-
-Document all required environment variables:
-
-```env
-# Backend
-DATABASE_URL=
-JWT_SECRET=
-NODE_ENV=production
-
-# Frontend
-REACT_APP_API_URL=
-```
-
----
-
-## ✅ DEPLOYMENT VALIDATION
-
-- [ ] Environment variables configured
-- [ ] Database migrations run
-- [ ] Application accessible
-- [ ] Smoke tests passing
-- [ ] Monitoring configured
-
----
-
-**File Output:** `deployment_config.md`  
-**Next:** Final deployment
 

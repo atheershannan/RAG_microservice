@@ -1,8 +1,0 @@
-{
-  "buildCommand": "cd FRONTEND && npm ci && npm run build",
-  "outputDirectory": "FRONTEND/build",
-  "installCommand": "cd FRONTEND && npm ci",
-  "framework": "create-react-app",
-  "devCommand": "cd FRONTEND && npm start"
-}
-

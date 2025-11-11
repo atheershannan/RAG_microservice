@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package rag.v1;
+
+// Knowledge Graph service (stub)
+service GraphService {
+  rpc GetGraphData(GraphRequest) returns (GraphResponse);
+}
+
+message GraphRequest {
+  string tenant_id = 1;
+  string node_id = 2;
+}
+
+message GraphResponse {
+  map<string, string> data = 1;
+}
+
+
+

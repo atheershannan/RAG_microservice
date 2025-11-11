@@ -1,31 +1,28 @@
+/**
+ * Redux store configuration
+ */
+
 import { configureStore } from '@reduxjs/toolkit';
-import authSlice from './slices/authSlice';
-import chatSlice from './slices/chatSlice';
-import contentSlice from './slices/contentSlice';
-import skillsSlice from './slices/skillsSlice';
-import progressSlice from './slices/progressSlice';
-import searchSlice from './slices/searchSlice';
-import uiSlice from './slices/uiSlice';
+import authSlice from './slices/auth.slice.js';
+import chatSlice from './slices/chat.slice.js';
+import userSlice from './slices/user.slice.js';
+import uiSlice from './slices/ui.slice.js';
+import { ragApi } from './api/ragApi.js';
 
 export const store = configureStore({
   reducer: {
     auth: authSlice,
     chat: chatSlice,
-    content: contentSlice,
-    skills: skillsSlice,
-    progress: progressSlice,
-    search: searchSlice,
+    user: userSlice,
     ui: uiSlice,
+    [ragApi.reducerPath]: ragApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
-      },
-    }),
+    getDefaultMiddleware().concat(ragApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
+
 
 

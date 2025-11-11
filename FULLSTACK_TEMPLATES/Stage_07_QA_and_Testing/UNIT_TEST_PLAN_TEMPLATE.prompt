@@ -1,56 +1,10 @@
-# 🧪 STAGE 07: UNIT TEST PLAN TEMPLATE
+# Stage 07 — Unit Test Plan
 
-> **Comprehensive testing strategy**
+## Process
+- Define unit test matrix per module with edge cases.
+- Mock dependencies and define fixtures.
 
----
+## Output
+- Unit test plan and coverage target (≥80%)
 
-## 📋 GENERATION INSTRUCTIONS
-
-Plan testing approach based on:
-- TDD plans from Stages 04 & 05
-- All components and endpoints
-
----
-
-## 🎯 TEST STRATEGY
-
-### Unit Tests
-- **Backend:** Individual functions, utilities
-- **Frontend:** Individual components
-- **Coverage Target:** 80%
-
-### Integration Tests
-- **Backend:** Service layer, repositories
-- **Frontend:** Component interactions
-- **Coverage Target:** 70%
-
-### E2E Tests
-- **Coverage:** Critical user flows
-- **Target:** Must-have features
-- **Coverage Target:** 50% of flows
-
----
-
-## 📝 TEST SCENARIOS
-
-Document test scenarios for:
-- Authentication flow
-- Registration flow
-- [MVP feature 1]
-- [MVP feature 2]
-- [More features]
-
----
-
-## ✅ VALIDATION
-
-- [ ] Unit test scenarios defined
-- [ ] Integration test scenarios defined
-- [ ] E2E test scenarios defined
-- [ ] Coverage targets set
-
----
-
-**File Output:** `testing_strategy.md`  
-**Next:** Proceed to Stage 08
 

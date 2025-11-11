@@ -1,51 +1,9 @@
-# 👥 STAGE 04: BACKEND CODE REVIEW TEMPLATE
+# Stage 04 — Backend Code Review Template
 
-> **Code review checklist for backend implementation (Stage 08 will reference this)**
+## Requirements
+- Tests exist and pass; coverage ≥80%
+- API contracts respected; errors handled
+- Security and performance considerations captured
+- Two reviewers minimum
 
----
-
-## 🔍 CODE REVIEW CHECKLIST
-
-### Functionality
-- [ ] All tests passing
-- [ ] Endpoints match ENDPOINTS_SPEC.md
-- [ ] Error handling implemented
-- [ ] Input validation present
-
-### Code Quality
-- [ ] Functions are small and focused
-- [ ] Naming is clear and descriptive
-- [ ] No code duplication
-- [ ] Comments where needed
-
-### Security
-- [ ] Input sanitization
-- [ ] Authentication checks
-- [ ] Authorization checks
-- [ ] No SQL injection risks
-- [ ] No secrets in code
-
-### Performance
-- [ ] Database queries optimized
-- [ ] No N+1 queries
-- [ ] Appropriate indexes used
-- [ ] Caching where beneficial
-
-### Testing
-- [ ] Test coverage ≥80%
-- [ ] Tests are readable
-- [ ] Tests are independent
-- [ ] Mocks used appropriately
-
----
-
-## 📝 REVIEW NOTES
-
-[Use this section during actual code review in Stage 08]
-
----
-
-**Template Version:** 1.0.0  
-**Stage:** 04/09 (Planning)  
-**Usage:** Referenced in Stage 08 (Implementation)
 

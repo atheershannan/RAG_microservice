@@ -1,87 +1,11 @@
-# 🔄 STAGE 03: PROJECT FLOW TEMPLATE
+# Stage 03 — Flow Diagrams (Adaptive)
 
-> **Define user flows and interaction logic**
+## Process
+- Build system and data flow diagrams from requirements and architecture.
+- Identify inputs, transformations, outputs, and error paths.
 
----
+## Output
+- Mermaid or textual diagrams
+- Save to PROJECT_EVOLUTION_LOG.md summary
 
-## 🔍 ENTRY QUESTIONNAIRE
-
-**BEFORE generating any content:**
-1. Review ENDPOINTS_SPEC.md from Stage 02
-2. Review user stories from Stage 01
-
-**Answer these questions:**
-
-### User Flow
-1. **What's the primary user flow?**
-   - Step-by-step user journey
-   - Example: "Register → Login → Dashboard → Create Item → View Items → Logout"
-
-2. **What are the main user personas?**
-   - List 2-3 primary user types
-   - Example: "New User, Returning User, Admin"
-
-3. **What screens/pages are needed?**
-   - List all pages for MVP
-   - Example: "Login, Register, Dashboard, Profile, Settings"
-
-### Interaction
-4. **What happens on page load?**
-   - Does it fetch data?
-   - What loading states?
-
-5. **How does user navigate between pages?**
-   - Routing structure
-   - Navigation menu items
-
-6. **What error states need handling?**
-   - Network errors
-   - Validation errors
-   - Authorization errors
-
----
-
-## 📝 TEMPLATE GENERATION
-
-Generate user flow diagrams in `flow_diagrams.md`:
-
-### Flow 1: User Registration Flow
-```mermaid
-graph LR
-A[Landing Page] -->|Click Sign Up| B[Registration Form]
-B -->|Submit| C{Validation}
-C -->|Invalid| B
-C -->|Valid| D[API Call]
-D -->|Success| E[Dashboard]
-D -->|Error| F[Error Message]
-```
-
-### Flow 2: [Next User Flow]
-[Create similar diagram for each major user flow]
-
----
-
-## 📄 GENERATE: flow_diagrams.md
-
-Include:
-- Registration flow
-- Login flow
-- Main feature flows (based on MVP)
-- Error handling flows
-- Navigation flows
-
----
-
-## ✅ VALIDATION
-
-- [ ] All MVP features have flow diagrams
-- [ ] Error states covered
-- [ ] Loading states defined
-- [ ] Navigation paths clear
-
----
-
-**Template Version:** 1.0.0  
-**Stage:** 03/09  
-**Next:** Stage 04 - Backend
 

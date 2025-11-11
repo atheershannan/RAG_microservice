@@ -1,71 +1,11 @@
-# 💡 STAGE 03: INTERACTION LOGIC TEMPLATE
+# Stage 03 — Interaction Logic (Adaptive)
 
-> **Define component interactions and state management**
+## Process
+- Define user interaction steps and state transitions.
+- Capture edge cases, retries, and error handling.
 
----
+## Output
+- Documented flows and state diagrams
+- Checklist references
 
-## 📋 GENERATION INSTRUCTIONS
-
-Define how components interact based on:
-- User stories from Stage 01
-- Endpoints from ENDPOINTS_SPEC.md (Stage 02)
-- Flow diagrams from FLOW_DIAGRAM_TEMPLATE
-
----
-
-## 🎯 INTERACTION DEFINITIONS
-
-For each user action, document:
-
-### Action Template
-```markdown
-## Action: [User Action]
-**Screen:** [Page/Component]  
-**Trigger:** [User clicks, form submit, etc.]  
-**API Call:** [From ENDPOINTS_SPEC.md]
-
-### Pre-conditions
-- [Condition that must be true]
-
-### Steps
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
-
-### Success Path
-- [What happens on success]
-- [State updates]
-- [UI updates]
-
-### Error Path
-- [What happens on error]
-- [Error messages shown]
-- [User options]
-```
-
----
-
-## 📝 GENERATE BY SCREEN
-
-### Screen 1: Login Page
-[Interaction logic here]
-
-### Screen 2: Dashboard
-[Interaction logic here]
-
-[Continue for all screens]
-
----
-
-## 🔄 STATE MANAGEMENT
-
-Document:
-- Global state (user, auth)
-- Component state (form data, UI state)
-- Server state (API data, loading states)
-
----
-
-**File Output:** `interaction_logic.md`  
-**Next:** Continue Stage 03
 

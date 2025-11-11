@@ -1,67 +1,11 @@
-# 🧪 STAGE 04: BACKEND TDD PLAN TEMPLATE
+# Stage 04 — Backend TDD Plan
 
-> **Define test structure and strategy BEFORE implementing backend**
+## Process
+- Write unit and integration test plans before implementation.
+- Define fixtures, mocks, coverage targets.
 
----
+## Output
+- Test plan files and coverage gates (≥80%)
+- Reviewer checklist enforced
 
-## 📋 TEST PYRAMID PLANNING
-
-### Unit Tests (Base)
-- **Target:** Individual functions and methods
-- **Coverage:** Business logic, utilities, helpers
-- **Examples:** Validation functions, data transformations
-
-### Integration Tests (Middle)
-- **Target:** Database operations, external services
-- **Coverage:** Repository methods, service layer interactions
-- **Examples:** Database queries, API integrations
-
-### Contract Tests (API Layer)
-- **Target:** API endpoints
-- **Coverage:** Request/response contracts
-- **Examples:** ENDPOINTS_SPEC.md validation
-
-### E2E Tests (Top)
-- **Target:** Complete user flows
-- **Coverage:** Critical paths
-- **Examples:** Login flow, checkout flow
-
----
-
-## 🎯 TEST CATEGORIES
-
-Generate test plans for:
-
-### Authentication Module
-- Unit: Password hashing, token generation
-- Integration: Auth service, database
-- Contract: Login, register endpoints
-
-### [Feature Module 1]
-[Similar structure]
-
-### [Feature Module 2]
-[Similar structure]
-
----
-
-## 📊 TEST COVERAGE TARGET
-
-**Minimum:** 80% code coverage  
-**Critical Paths:** 100% coverage
-
----
-
-## ✅ VALIDATION CHECKLIST
-
-- [ ] Test pyramid planned
-- [ ] Unit test cases defined
-- [ ] Integration test cases defined
-- [ ] API test cases defined (from ENDPOINTS_SPEC.md)
-- [ ] Coverage target set
-
----
-
-**File Output:** `backend_tdd_plan.md`  
-**Next:** Proceed to Stage 05
 

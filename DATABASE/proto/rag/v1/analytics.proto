@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package rag.v1;
+
+// Analytics service (stub)
+service AnalyticsService {
+  rpc GetAnalytics(AnalyticsRequest) returns (AnalyticsResponse);
+}
+
+message AnalyticsRequest {
+  string tenant_id = 1;
+}
+
+message AnalyticsResponse {
+  map<string, string> data = 1;
+}
+
+
+

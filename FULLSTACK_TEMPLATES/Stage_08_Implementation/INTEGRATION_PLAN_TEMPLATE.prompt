@@ -1,59 +1,10 @@
-# 🔗 STAGE 08: INTEGRATION PLAN TEMPLATE
+# Stage 08 — Integration Plan
 
-> **Connect frontend and backend, test end-to-end**
+## Process
+- Sequence backend and frontend integration with database migrations.
+- Define smoke tests and rollback triggers.
 
----
+## Output
+- Integration steps and verification checklist
 
-## 📋 INTEGRATION CHECKLIST
-
-### Backend-Frontend Connection
-- [ ] API service configured with correct base URL
-- [ ] CORS configured on backend
-- [ ] Authentication tokens passed correctly
-- [ ] Error handling consistent
-
-### E2E Testing
-- [ ] User registration flow tested
-- [ ] User login flow tested
-- [ ] Critical MVP features tested end-to-end
-- [ ] Error scenarios tested
-
-### Integration Test Scenarios
-
-#### Scenario 1: Complete Registration Flow
-1. User lands on registration page
-2. Fills form
-3. Submits
-4. Backend creates user
-5. User redirected to dashboard
-6. User authenticated
-
-**Expected Result:** ✅ All steps complete successfully
-
-#### Scenario 2: [Next Critical Flow]
-[D Efine similar flow]
-
----
-
-## ✅ VALIDATION
-
-Before proceeding to Stage 09:
-- [ ] All E2E tests passing
-- [ ] Integration issues resolved
-- [ ] No console errors
-- [ ] Authentication working end-to-end
-- [ ] Data flow validated
-
----
-
-## 🚦 NEXT STAGE
-
-Once integration complete:
-→ Proceed to **Stage 09: Deployment**
-
----
-
-**Template Version:** 1.0.0  
-**Stage:** 08/09 - Integration  
-**Next:** Stage 09 - Deployment
 

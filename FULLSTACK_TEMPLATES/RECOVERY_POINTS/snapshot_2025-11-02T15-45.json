@@ -1,0 +1,8 @@
+{
+	"timestamp": "2025-11-02T15:45:00Z",
+	"author": "{{AUTHOR}}",
+	"stage": "Global",
+	"summary": "Post-initialization snapshot",
+	"hash": "{{COMMIT_SHA}}"
+}
+

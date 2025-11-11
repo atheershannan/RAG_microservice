@@ -1,0 +1,105 @@
+# FEATURE_LIFECYCLE_MANAGER v3.1 — Cursor Adaptive Agent
+
+Purpose
+-------
+Manage Add, Update, and Retire operations for features in a modular, traceable, and reversible way. Enforce dynamic context-aware dialogue, dependency safety, recovery snapshots, and complete audit logging.
+
+Execution Rules
+---------------
+- Always begin with context scan (FEATURES_REGISTRY.md, PROJECT_EVOLUTION_LOG.md, ROADMAP.md, relevant Stage files).
+- Ask only necessary adaptive questions to resolve gaps/conflicts.
+- Store all dialogues in `/features/<feature_name>/SESSION_LOGS/`.
+- Append a summary to `PROJECT_EVOLUTION_LOG.md` and entry in `/LOGS/FEATURE_ACTIVITY.log`.
+- Create recovery snapshots in `/RECOVERY_POINTS/` before any destructive changes.
+- Restrict updates to isolated feature scopes; avoid cross-feature leakage.
+
+Operations
+----------
+## A) Add Feature
+1) Context Scan
+- Detect name collisions, overlap with existing features, and architectural fit.
+- List dependencies (backend, frontend, database, AI components).
+
+2) Adaptive Questions (ask only missing items)
+- Feature goal, owner, priority, target release.
+- Dependencies and contracts (APIs, events, schemas).
+- TDD hooks scope (unit/integration/e2e) and coverage targets.
+
+3) Actions
+- Create `/features/<feature_name>/` tree:
+  - `backend/`, `frontend/`, `tests/`, `docs/FEATURE_SPEC.md`, `DIALOGUES/`, `SESSION_LOGS/`, `changelog.md`, `README.md`
+- Register feature in `FEATURES_REGISTRY.md` (Status: Planned/Active).
+- Initialize TDD hooks placeholders in `tests/`.
+- Save session log and decisions.
+- Append `PROJECT_EVOLUTION_LOG.md` and `LOGS/FEATURE_ACTIVITY.log`.
+- Create recovery snapshot: `/RECOVERY_POINTS/feature_add_<name>_v1.0.json`.
+
+4) Checklist (must pass)
+- [ ] Dependencies analyzed
+- [ ] Structure generated
+- [ ] Feature registered
+- [ ] TDD hooks initialized
+- [ ] Dialogue log created
+- [ ] Commit to evolution log
+
+## B) Update Feature
+1) Pre-Update Dependency Scan
+- Identify impacted modules, shared logic, and contracts.
+- Detect unlogged changes or drift.
+
+2) Adaptive Questions
+- Scope of change and risk level.
+- Backward compatibility, migrations, and rollout plan.
+- Test impact and regression coverage.
+
+3) Actions
+- Create recovery snapshot: `/RECOVERY_POINTS/feature_update_<name>_v1.1.json`.
+- Apply changes within isolated feature scope.
+- Update tests; run regression plans.
+- Save session transcript and summarize decisions.
+- Update registry/status and append logs.
+
+4) Checklist
+- [ ] Dependency scan complete
+- [ ] Impact analysis validated
+- [ ] Recovery snapshot saved
+- [ ] Update executed safely
+- [ ] Regression tests passed
+- [ ] Log entries updated
+
+## C) Retire Feature
+1) Analysis
+- Ensure no active dependencies remain; list deprecations.
+
+2) Actions
+- Archive to `/ARCHIVE/features/<feature_name>/` with `archived_code/`, `archived_docs/`, `changelog.md`.
+- Mark as Inactive/Archived in `FEATURES_REGISTRY.md`.
+- Update project and feature logs; snapshot current state.
+
+3) Checklist
+- [ ] Feature archived
+- [ ] Dependencies cleared
+- [ ] Registry updated
+- [ ] Changelog finalized
+- [ ] Log entries confirmed
+
+Dialogue System
+---------------
+- Roles: Feature Owner, Backend Lead, AI Engineer, QA Lead (confirm participants first).
+- Run multi-round pseudo-code dialogues for ambiguous/risky decisions.
+- Save under `/features/<feature_name>/DIALOGUES/<feature>_<YYYY-MM-DD>_dialogue.md`.
+- Add summary link to `PROJECT_EVOLUTION_LOG.md`.
+
+Logging & Traceability
+----------------------
+- `FEATURES_REGISTRY.md`: authoritative status of features (Active/Planned/Archived), owners, deps.
+- `PROJECT_EVOLUTION_LOG.md`: `{{TIMESTAMP}} | {{AUTHOR}} | {{ACTION_TYPE}} | Feature:<name> | Files: {{FILES}} | Summary: {{DECISION}} | Commit: {{SHA}}`
+- `/LOGS/FEATURE_ACTIVITY.log`: chronological feature events.
+- `/RECOVERY_POINTS/`: JSON snapshots for adds/updates.
+
+Safety & Non-Destructive Evolution
+----------------------------------
+- No stage is skipped or overwritten; require explicit approval to proceed at gates.
+- Changes must be reproducible and reversible via snapshots and logs.
+
+

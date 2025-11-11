@@ -1,0 +1,12 @@
+# Stage 08 — Update Existing Feature (Non-Destructive)
+
+## Process
+- Create recovery snapshot before changes.
+- Update specs, tests, and implementation non-destructively.
+- Record deltas and migration notes.
+
+## Output
+- Updated feature docs and logs
+- Snapshot stored in `RECOVERY_POINTS/`
+
+

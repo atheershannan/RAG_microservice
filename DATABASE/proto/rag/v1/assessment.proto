@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package rag.v1;
+
+// Assessment service (stub)
+service AssessmentService {
+  rpc GetAssessmentData(AssessmentRequest) returns (AssessmentResponse);
+}
+
+message AssessmentRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+}
+
+message AssessmentResponse {
+  map<string, string> data = 1;
+}
+
+
+

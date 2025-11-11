@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package rag.v1;
+
+// Personalized assistance service
+service PersonalizedService {
+  rpc GetRecommendations(RecommendationsRequest) returns (RecommendationsResponse);
+  rpc UpdateUserProfile(UserProfileRequest) returns (UserProfileResponse);
+}
+
+message RecommendationsRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+  string query_id = 3;
+}
+
+message RecommendationsResponse {
+  repeated Recommendation recommendations = 1;
+}
+
+message Recommendation {
+  string recommendation_type = 1;
+  string recommendation_id = 2;
+  string title = 3;
+  string description = 4;
+  string reason = 5;
+  int32 priority = 6;
+}
+
+message UserProfileRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+  map<string, string> profile_data = 3;
+}
+
+message UserProfileResponse {
+  string user_id = 1;
+  bool success = 2;
+}
+
+
+

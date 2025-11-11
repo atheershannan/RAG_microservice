@@ -1,49 +1,8 @@
-# 👥 STAGE 05: FRONTEND CODE REVIEW TEMPLATE
+# Stage 05 — Frontend Code Review Template
 
-> **Code review checklist for frontend implementation (Stage 08)**
+## Requirements
+- Tests exist and pass; coverage ≥80%
+- Accessibility and performance checks
+- Two reviewers minimum
 
----
-
-## 🔍 CODE REVIEW CHECKLIST
-
-### Functionality
-- [ ] Components work as specified
-- [ ] UI matches designs
-- [ ] Error states handled
-- [ ] Loading states implemented
-
-### Code Quality
-- [ ] Components are reusable
-- [ ] Props properly typed
-- [ ] No unnecessary re-renders
-- [ ] Clean, readable code
-
-### Accessibility
-- [ ] ARIA labels present
-- [ ] Keyboard navigation works
-- [ ] Screen reader compatible
-- [ ] Color contrast sufficient
-
-### Performance
-- [ ] No memory leaks
-- [ ] Images optimized
-- [ ] Code splitting used
-- [ ] Lazy loading implemented
-
-### Testing
-- [ ] Test coverage ≥80%
-- [ ] Tests are meaningful
-- [ ] User interactions tested
-
----
-
-## 📝 REVIEW NOTES
-
-[Use during Stage 08 code review]
-
----
-
-**Template Version:** 1.0.0  
-**Stage:** 05/09 (Planning)  
-**Usage:** Referenced in Stage 08
 

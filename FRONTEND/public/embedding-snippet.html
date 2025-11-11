@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embedding Snippet - RAG Chat Widget</title>
+</head>
+<body>
+    <h1>How to Embed the RAG Chat Widget</h1>
+    
+    <h2>Option 1: Script Tag</h2>
+    <pre><code>&lt;script src="https://your-domain.com/widget.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  RAGWidget.init({
+    apiUrl: 'https://api.your-domain.com',
+    tenantId: 'your-tenant-id'
+  });
+&lt;/script&gt;</code></pre>
+
+    <h2>Option 2: React Component</h2>
+    <pre><code>import FloatingChatWidget from '@rag-microservice/widget';
+
+function App() {
+  return &lt;FloatingChatWidget apiUrl="https://api.your-domain.com" /&gt;;
+}</code></pre>
+
+    <h2>Option 3: iframe</h2>
+    <pre><code>&lt;iframe 
+  src="https://widget.your-domain.com"
+  width="400"
+  height="600"
+  frameborder="0"
+&gt;&lt;/iframe&gt;</code></pre>
+</body>
+</html>
+
+
+

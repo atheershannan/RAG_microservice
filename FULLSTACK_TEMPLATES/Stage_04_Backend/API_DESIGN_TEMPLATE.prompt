@@ -1,67 +1,11 @@
-# 🔌 STAGE 04: BACKEND API DESIGN TEMPLATE
+# Stage 04 — Backend API Design (TDD First)
 
-> **TDD Planning for Backend - Write test plans BEFORE implementation**
+## Process
+- Derive endpoints from stories and `ENDPOINTS_SPEC.md`.
+- Define request/response schemas and error contracts.
 
----
+## Output
+- API spec with examples and validation rules
+- Update `PROJECT_EVOLUTION_LOG.md`
 
-## 🔍 ENTRY QUESTIONNAIRE
-
-1. **Review ENDPOINTS_SPEC.md from Stage 02 - how many endpoints?**
-   - Count: [number]
-
-2. **What's the MVP backend architecture?**
-   - Layers: Controller → Service → Repository?
-   - Other pattern?
-
-3. **What entities need models?**
-   - Based on requirements, list: User, Product, Order, etc.
-
----
-
-## 📝 TDD PLANNING (NOT Implementation)
-
-Generate test plans in `backend_tdd_plan.md`:
-
-### Example Test Structure
-
-#### Endpoint: POST /api/auth/register
-
-##### Test 1: Register with Valid Data
-- **Given:** Valid email and password
-- **When:** POST /api/auth/register
-- **Expect:** 201 status, user created, token returned
-- **Assert:** User in database, token valid
-
-##### Test 2: Register with Invalid Email
-- **Given:** Invalid email format
-- **When:** POST /api/auth/register
-- **Expect:** 400 status, error message
-- **Assert:** No user created
-
-##### Test 3: Register with Duplicate Email
-- **Given:** Email already exists
-- **When:** POST /api/auth/register
-- **Expect:** 409 status, error message
-
----
-
-## 📋 GENERATE FOR ALL ENDPOINTS
-
-Repeat this structure for every endpoint in ENDPOINTS_SPEC.md
-
----
-
-## ✅ VALIDATION
-
-- [ ] All endpoints have test plans
-- [ ] Happy paths covered
-- [ ] Error paths covered
-- [ ] Edge cases considered
-- [ ] NOT implementing code yet!
-
----
-
-**Template Version:** 1.0.0  
-**Stage:** 04/09  
-**Next:** Stage 05 - Frontend TDD Planning
 

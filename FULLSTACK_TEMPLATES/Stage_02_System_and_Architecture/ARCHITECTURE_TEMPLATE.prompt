@@ -1,181 +1,20 @@
-# 🏗️ STAGE 02: SYSTEM & ARCHITECTURE TEMPLATE
+# Stage 02 — System & Architecture (Adaptive)
 
-> **Design the system architecture and technical approach**
+## Roles
+- Architect, Backend Lead, Frontend Lead, AI Engineer, Product Owner, UX Designer
 
----
+## Process
+1. Confirm roles and kickoff pseudo-code dialogue.
+2. Scan context; list conflicts and unknowns.
+3. Propose candidate architectures with trade-offs.
+4. Iterate dialogue until consensus.
 
-## 🔍 ENTRY QUESTIONNAIRE
+## Outputs
+- Chosen architecture with rationale and trade-offs
+- Dialogue transcript in ./DIALOGUES/{{TIMESTAMP}}_architecture_dialogue.md
+- Update PROJECT_EVOLUTION_LOG.md and ROADMAP.md
 
-**BEFORE generating any content, answer these questions:**
+## Unlock Condition
+- `CHECKLIST.md` satisfied and approved
 
-### Requirements Review
-1. **Review requirements from Stage 01 - What MVP features must we support?**
-   - List the top 3-5 critical features
-
-2. **What's the expected user load?**
-   - Concurrent users: [number]
-   - Requests per second: [number]
-   - Example: "1000 concurrent users, 100 RPS"
-
-3. **What are the hosting/deployment constraints?**
-   - Cloud provider preference? (AWS/GCP/Azure/VPS)
-   - Budget for hosting?
-   - Example: "AWS, free tier for MVP"
-
-### Technology Stack
-4. **Backend framework preference?**
-   - Node.js (Express/NestJS/Fastify)
-   - Python (Django/FastAPI/Flask)
-   - Java (Spring Boot)
-   - .NET (ASP.NET Core)
-   - Other: [specify]
-
-5. **Frontend framework preference?**
-   - React
-   - Vue
-   - Next.js
-   - Angular
-   - Other: [specify]
-
-6. **Database preference?**
-   - PostgreSQL
-   - MySQL
-   - MongoDB
-   - SQLite
-   - Other: [specify]
-
-7. **Authentication method?**
-   - JWT tokens
-   - Session-based
-   - OAuth (Google/GitHub)
-   - Custom
-   - Example: "JWT with refresh tokens"
-
-### Architecture Pattern
-8. **Which architecture pattern?**
-   - REST API
-   - GraphQL
-   - Microservices
-   - Serverless
-   - Monolith (recommended for MVP)
-   - Example: "REST API, monolith for MVP"
-
-9. **Do you need real-time features?**
-   - Yes, WebSockets needed
-   - No, standard request/response
-   - Example: "No real-time needed for MVP"
-
-10. **What external services/integrations?**
-    - Payment processing (Stripe/PayPal)
-    - Email service (SendGrid/SES)
-    - Storage (S3/GCS)
-    - None for MVP
-    - Example: "Stripe for payments, SendGrid for emails"
-
----
-
-## 📝 TEMPLATE GENERATION INSTRUCTIONS
-
-Based on your answers, generate:
-
-### 1. System Architecture Diagram
-**File:** `architecture_diagram.md`
-
-Structure:
-```markdown
-# System Architecture
-
-## Overview
-[High-level description]
-
-## Component Diagram
-```
-[ASCII or text diagram showing relationships]
-```
-
-## Data Flow
-1. [User] → [Frontend]
-2. [Frontend] → [Backend API]
-3. [Backend] → [Database]
-...
-
-## Technology Stack
-- Backend: [From Q4]
-- Frontend: [From Q5]
-- Database: [From Q6]
-- Auth: [From Q7]
-- Pattern: [From Q8]
-```
-
-### 2. Endpoints Specification
-**File:** `ENDPOINTS_SPEC.md` ⚠️ CRITICAL FILE
-
-This file defines all API contracts and is required before Stage 04!
-
-Structure:
-```markdown
-# API Endpoints Specification
-
-## Base URL
-http://api.example.com
-
-## Authentication
-All requests require: Authorization: Bearer {token}
-
-## Endpoints
-
-### POST /api/auth/register
-**Description:** Register new user
-**Request Body:**
-```json
-{
-  "email": "string",
-  "password": "string"
-}
-```
-**Response (201):**
-```json
-{
-  "user": {...},
-  "token": "string"
-}
-```
-
-### [More endpoints...]
-```
-
-⚠️ **IMPORTANT:** This file is referenced by:
-- Stage 03 (Project Flow)
-- Stage 04 (Backend TDD Planning)
-- Stage 08 (Implementation)
-
-Generate ALL endpoints needed for MVP features!
-
----
-
-## ✅ VALIDATION CHECKLIST
-
-Before proceeding to Stage 03:
-- [ ] Architecture diagram complete
-- [ ] ENDPOINTS_SPEC.md created with all endpoints
-- [ ] Tech stack justified
-- [ ] Scalability considered
-- [ ] Security architecture planned
-- [ ] Entry questions answered
-
----
-
-## 🚦 NEXT STAGE
-
-Once architecture is complete and validated:
-→ Proceed to **Stage 03: Project Flow**
-
-**Unlock Condition:** ENDPOINTS_SPEC.md must be complete and all checklist items ✅
-
----
-
-**Template Version:** 1.0.0  
-**Stage:** 02/09  
-**Next:** Stage 03 - Project Flow  
-**Dependencies:** Requires Stage 01 completion
 

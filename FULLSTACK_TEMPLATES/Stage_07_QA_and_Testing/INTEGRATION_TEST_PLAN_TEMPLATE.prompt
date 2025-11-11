@@ -1,52 +1,11 @@
-# 🔗 STAGE 07: INTEGRATION TEST PLAN TEMPLATE
+# Stage 07 — Integration & Regression Test Plan
 
-> **Define integration test scenarios**
+## Process
+- Define cross-module tests, API contract tests, and smoke tests.
+- Plan regression suite and CI hooks.
 
----
+## Output
+- Integration and regression test plan
+- CI gating criteria
 
-## 📋 GENERATION INSTRUCTIONS
-
-Plan integration tests covering:
-- Backend-frontend integration
-- Database operations
-- External service integrations
-
----
-
-## 🎯 INTEGRATION TEST SCOPES
-
-### API Integration
-- Test all endpoints from ENDPOINTS_SPEC.md
-- Validate request/response contracts
-- Test error handling
-
-### Database Integration
-- Test repository methods
-- Test migrations
-- Test data integrity
-
-### Frontend-Backend Integration
-- Test API calls from components
-- Test data flow end-to-end
-- Test error handling in UI
-
----
-
-## 📝 TEST SCENARIOS
-
-[Document integration test scenarios]
-
----
-
-## ✅ VALIDATION
-
-- [ ] API integration tests planned
-- [ ] Database integration tests planned
-- [ ] Frontend-backend integration planned
-- [ ] External services mocked
-
----
-
-**File Output:** `integration_test_plan.md`  
-**Next:** Continue Stage 07
 

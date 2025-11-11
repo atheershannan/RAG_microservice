@@ -1,48 +1,10 @@
-# 🔗 STAGE 06: SCHEMA & RELATIONS TEMPLATE
+# Stage 06 — Schema & Relations
 
-> **Complete database schema design**
+## Process
+- Define tables/collections, columns/fields, relations, and constraints.
+- Write migration plan and seeds outline.
 
----
+## Output
+- Schema draft and migration checklist
 
-## 📋 GENERATION INSTRUCTIONS
-
-Generate complete database schema based on:
-- Requirements from Stage 01
-- Endpoints from Stage 02 (need to know what data is stored)
-- Entity relationships
-
----
-
-## 📊 SCHEMA DOCUMENTATION
-
-Create `database_schema.md` with:
-
-### Table Definitions
-[All tables with columns]
-
-### Relationships
-```
-User (1) ────< (many) Orders
-Order (many) >─── (1) Product
-```
-
-### Indexes
-- [Performance-critical indexes]
-
-### Migrations
-- [Migration files planned]
-
----
-
-## ✅ VALIDATION
-
-- [ ] Schema supports all MVP features
-- [ ] Relationships correct
-- [ ] Indexes for query optimization
-- [ ] Migrations planned
-
----
-
-**File Output:** `database_schema.md`  
-**Next:** Proceed to Stage 07
 

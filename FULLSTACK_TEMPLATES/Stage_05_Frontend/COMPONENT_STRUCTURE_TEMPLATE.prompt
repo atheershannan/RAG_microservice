@@ -1,71 +1,11 @@
-# 🧱 STAGE 05: COMPONENT STRUCTURE TEMPLATE
+# Stage 05 — Component Structure
 
-> **Define component architecture and state management**
+## Process
+- Define component hierarchy, props, state, and data fetching boundaries.
+- Accessibility and responsiveness considerations.
 
----
+## Output
+- Component tree with responsibilities
+- Testing hooks identified
 
-## 📋 GENERATION INSTRUCTIONS
-
-Plan component structure based on:
-- UI flows from Stage 03
-- User stories from Stage 01
-
----
-
-## 📦 COMPONENT CATEGORIES
-
-### Pages (Routes)
-- [List all page components]
-
-### Layouts
-- [List layout components]
-
-### Components
-- [List reusable components]
-
-### Hooks
-- [List custom hooks]
-
-### Services
-- [List API services]
-
----
-
-## 🔄 STATE MANAGEMENT PLAN
-
-### Global State
-- User session
-- Theme preferences
-- [Other global state]
-
-### Component State
-- Form data
-- UI toggles
-- [Other component state]
-
-### Server State
-- API data
-- Loading states
-- [Other server state]
-
----
-
-## 🎯 FILE STRUCTURE
-
-```
-src/
-├── components/
-│   ├── common/
-│   ├── layout/
-│   └── features/
-├── pages/
-├── hooks/
-├── services/
-└── utils/
-```
-
----
-
-**File Output:** `component_structure.md`  
-**Next:** Continue Stage 05
 

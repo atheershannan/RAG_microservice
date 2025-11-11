@@ -1,70 +1,11 @@
-# 🎨 STAGE 05: FRONTEND UI FLOW TEMPLATE
+# Stage 05 — UI Flow (TDD First)
 
-> **TDD Planning for Frontend - Define components and test structure**
+## Process
+- Map screens to user stories and flows.
+- Define component states and error handling.
 
----
+## Output
+- UI flow diagrams and state charts
+- Acceptance criteria references
 
-## 🔍 ENTRY QUESTIONNAIRE
-
-1. **Review flow diagrams from Stage 03 - how many screens?**
-   - Count: [number]
-
-2. **What's the UI framework?** (from Stage 02)
-   - React / Vue / Next.js / Angular
-
-3. **What components are needed?**
-   - List: Button, Form, Card, Modal, etc.
-
----
-
-## 📝 COMPONENT STRUCTURE PLANNING
-
-### Component Hierarchy
-```
-App
-├── Auth
-│   ├── LoginForm
-│   ├── RegisterForm
-├── Dashboard
-│   ├── DashboardLayout
-│   ├── UserCard
-├── [Other screens]
-```
-
----
-
-## 🧪 TEST PLANNING (Not Implementation)
-
-For each component, plan tests:
-
-### Component: LoginForm
-
-#### Test 1: Renders Input Fields
-- **Expect:** Email and password inputs visible
-- **Assert:** Form fields have correct labels
-
-#### Test 2: Handles Form Submit
-- **Given:** Valid credentials
-- **When:** Form submitted
-- **Expect:** API called, redirect occurs
-
-#### Test 3: Displays Validation Errors
-- **Given:** Invalid input
-- **When:** Form submitted
-- **Expect:** Error messages displayed
-
----
-
-## ✅ VALIDATION
-
-- [ ] All components planned
-- [ ] Component hierarchy defined
-- [ ] Test cases for each component
-- [ ] State management approach decided
-
----
-
-**Template Version:** 1.0.0  
-**Stage:** 05/09  
-**Next:** Stage 06 - Database
 

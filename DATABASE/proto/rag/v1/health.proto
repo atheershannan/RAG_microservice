@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package rag.v1;
+
+// Health check service
+service HealthService {
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {
+  // Empty
+}
+
+message HealthCheckResponse {
+  string status = 1;
+  string version = 2;
+  map<string, string> services = 3;
+}
+
+
+

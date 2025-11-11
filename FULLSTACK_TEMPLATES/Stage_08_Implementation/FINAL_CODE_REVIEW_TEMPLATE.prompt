@@ -1,78 +1,8 @@
-# 👥 STAGE 08: FINAL CODE REVIEW TEMPLATE
+# Stage 08 — Final Code Review Template
 
-> **Comprehensive code review before deployment**
+## Requirements
+- Tests first, coverage ≥80% on critical paths
+- Security, performance, and accessibility checks
+- Two reviewers minimum
 
----
-
-## 🔍 FINAL CODE REVIEW CHECKLIST
-
-### Overall Quality
-- [ ] All tests passing
-- [ ] Test coverage ≥80%
-- [ ] No linting errors
-- [ ] No security vulnerabilities
-- [ ] Documentation complete
-
-### Backend Review
-- [ ] All endpoints match ENDPOINTS_SPEC.md
-- [ ] Error handling consistent
-- [ ] Input validation present
-- [ ] Database queries optimized
-- [ ] Authentication secured
-- [ ] Logging implemented
-
-### Frontend Review
-- [ ] All components work correctly
-- [ ] Error states handled
-- [ ] Loading states implemented
-- [ ] Accessibility verified
-- [ ] Responsive design validated
-- [ ] Performance optimized
-
-### Integration Review
-- [ ] Frontend-backend communication works
-- [ ] E2E flows complete
-- [ ] CORS configured correctly
-- [ ] Authentication end-to-end
-- [ ] Error handling consistent
-
----
-
-## 👥 REVIEWER SIGN-OFF
-
-**Required: Two reviewers must sign off**
-
-### Reviewer 1
-- Name: _________________
-- Date: _________________
-- Comments:
-```
-[Reviewer comments]
-```
-- Sign-off: [ ] Approved / [ ] Needs Changes
-
-### Reviewer 2
-- Name: _________________
-- Date: _________________
-- Comments:
-```
-[Reviewer comments]
-```
-- Sign-off: [ ] Approved / [ ] Needs Changes
-
----
-
-## ✅ READY FOR DEPLOYMENT
-
-Once both reviewers sign off:
-- [ ] All issues addressed
-- [ ] Final test suite run
-- [ ] Documentation updated
-- [ ] Ready for Stage 09
-
----
-
-**Template Version:** 1.0.0  
-**Stage:** 08/09 - Final Code Review  
-**Next:** Stage 09 - Deployment
 

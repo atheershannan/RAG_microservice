@@ -1,80 +1,9 @@
-# 🚀 STAGE 09: DEPLOYMENT SCRIPT TEMPLATE
+# Stage 09 — Deployment Script (Template)
 
-> **Deploy to production with CI/CD automation**
+## Steps
+- Prepare environment variables
+- Run `lint → build → test`
+- Deploy to target using env-only secrets
+- Run smoke tests; rollback on failure
 
----
-
-## 🔍 ENTRY QUESTIONNAIRE
-
-1. **Where are you deploying?**
-   - Cloud provider: [AWS / GCP / Azure / VPS]
-   - Database host: [Same / Separate]
-   - CDN: [CloudFlare / CloudFront]
-
-2. **What's the deployment target?**
-   - Staging environment first?
-   - Direct to production?
-   - Both?
-
-3. **Do you have environment variables configured?**
-   - List required variables
-   - Where are they stored? (GitHub Secrets / AWS Secrets Manager)
-
----
-
-## 📝 DEPLOYMENT STRATEGY
-
-### Option 1: Manual Deployment (Testing)
-```bash
-# Build backend
-cd backend && npm run build
-
-# Build frontend
-cd frontend && npm run build
-
-# Deploy
-# [Provider-specific deployment commands]
-```
-
-### Option 2: CI/CD Pipeline (Recommended)
-
-Use GitHub Actions (see GITHUB_ACTIONS_TEMPLATE.yml)
-
----
-
-## 🎯 DEPLOYMENT CHECKLIST
-
-### Pre-Deployment
-- [ ] All tests passing locally
-- [ ] Environment variables documented
-- [ ] Database migrations prepared
-- [ ] Build process tested locally
-
-### Deployment Steps
-- [ ] Create deployment branch
-- [ ] Push to repository
-- [ ] CI/CD pipeline triggers
-- [ ] Run smoke tests
-- [ ] Verify deployment
-
-### Post-Deployment
-- [ ] Verify application is live
-- [ ] Run smoke tests in production
-- [ ] Monitor error logs
-- [ ] Check analytics
-
----
-
-## ✅ VALIDATION
-
-- [ ] Deployment successful
-- [ ] Application accessible
-- [ ] No errors in logs
-- [ ] Performance acceptable
-
----
-
-**Template Version:** 1.0.0  
-**Stage:** 09/09 (Final Stage)  
-**End:** Project Deployment Complete! 🎉
 

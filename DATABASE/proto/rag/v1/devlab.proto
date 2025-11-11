@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package rag.v1;
+
+// DevLab service (stub)
+service DevLabService {
+  rpc GetDevLabData(DevLabRequest) returns (DevLabResponse);
+}
+
+message DevLabRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+}
+
+message DevLabResponse {
+  map<string, string> data = 1;
+}
+
+
+

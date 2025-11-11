@@ -1,258 +1,179 @@
-# 🎓 Corporate Learning Assistant
+# EDUCORE - Contextual Assistant (RAG / Knowledge Graph) Microservice
 
-> AI-powered corporate learning assistant with RAG and knowledge graphs
+Central contextual intelligence layer for EDUCORE learning ecosystem.
 
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-[![React](https://img.shields.io/badge/React-18+-blue.svg)](https://reactjs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)](https://postgresql.org/)
-[![Supabase](https://img.shields.io/badge/Supabase-Ready-green.svg)](https://supabase.com/)
-[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4-orange.svg)](https://openai.com/)
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 18+
-- PostgreSQL or Supabase account
-- OpenAI API key
-
-### Installation
-```bash
-# Clone the repository
-git clone <repository-url>
-cd corporate-learning-assistant
-
-# Install dependencies
-npm run install:all
-
-# Setup environment variables
-cp BACKEND/env.example BACKEND/.env
-cp FRONTEND/env.example FRONTEND/.env
-# Edit .env files with your configuration
-
-# Setup database
-npm run db:migrate
-npm run db:seed
-
-# Start the application
-npm start
-```
-
-### Access Points
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:3001
-- **Health Check**: http://localhost:3001/health
-
-## 📁 Project Structure
+## Project Structure
 
 ```
-corporate-learning-assistant/
-├── BACKEND/                 # Node.js Express API
+rag-microservice/
+├── BACKEND/          # Backend services (Node.js + Express + gRPC)
 │   ├── src/
-│   │   ├── routes/         # API routes
-│   │   ├── services/       # Business logic
-│   │   ├── middleware/     # Express middleware
-│   │   ├── database/      # Database utilities
-│   │   └── tests/         # Backend tests
-│   ├── prisma/            # Database schema
-│   └── package.json
-├── FRONTEND/               # React application
+│   ├── tests/
+│   ├── package.json
+│   └── ...
+├── FRONTEND/         # Frontend widget (React + Material-UI)
 │   ├── src/
-│   │   ├── components/    # React components
-│   │   ├── pages/         # Page components
-│   │   ├── store/         # Redux store
-│   │   ├── services/      # API services
-│   │   └── hooks/         # Custom hooks
-│   └── package.json
-├── DATABASE/              # Database configuration
-│   ├── schema/            # SQL schemas
-│   ├── functions/         # Database functions
-│   └── seed/             # Sample data
-├── DEPLOYMENT/            # Deployment configuration
-│   ├── docker/            # Docker files
-│   └── kubernetes/       # K8s manifests
-└── FULLSTACK_TEMPLATES/   # Development templates
+│   ├── tests/
+│   ├── package.json
+│   └── ...
+├── DATABASE/         # Database schema and migrations
+│   ├── prisma/
+│   │   ├── schema.prisma
+│   │   ├── seed.js
+│   │   └── migrations/
+│   └── proto/        # Protocol Buffer definitions
+└── FULLSTACK_TEMPLATES/  # Development templates and documentation
 ```
 
-## 🎯 Features
+## Overview
 
-### Core Features
-- **RAG-powered Chat**: AI assistant with retrieval-augmented generation
-- **Knowledge Graph**: Dynamic relationships between learning content
-- **Personalized Recommendations**: AI-driven content suggestions
-- **Multi-modal Support**: Text, document, and video queries
-- **Real-time Analytics**: Learning progress tracking
-- **Microservice Integration**: Seamless connection to existing systems
+This microservice provides RAG (Retrieval-Augmented Generation) and Knowledge Graph capabilities for the EDUCORE platform, serving as the central contextual intelligence layer that integrates with 10 other microservices.
 
-### Technical Features
-- **Vector Search**: HNSW algorithm for fast similarity search
-- **Authentication**: JWT-based auth with Supabase
-- **Real-time Updates**: WebSocket connections
-- **Responsive Design**: Mobile-first UI
-- **Performance**: Optimized for speed and scalability
+## Features
 
-## 🛠️ Technology Stack
+- **RAG Query Processing** - Contextual query answering with source citations
+- **Vector Search** - Semantic similarity search using pgvector
+- **Knowledge Graph** - Unified knowledge graph integrating all microservices
+- **Personalized Assistance** - Role and profile-based responses
+- **Access Control** - RBAC, ABAC, and fine-grained permissions
+- **Multi-tenant Isolation** - Complete tenant data isolation
+
+## Tech Stack
 
 ### Backend
-- **Node.js** with Express.js
-- **PostgreSQL** with pgvector
-- **Prisma** ORM
-- **Supabase** Backend-as-a-Service
-- **OpenAI** GPT-4 API
-- **Redis** for caching
-- **Winston** for logging
+- **Runtime:** Node.js 20 LTS + JavaScript (ES2022+)
+- **Framework:** Express.js + @grpc/grpc-js
+- **Database:** PostgreSQL 15+ with pgvector
+- **ORM:** Prisma
+- **Cache:** Redis 7+
+- **Message Queue:** Apache Kafka
+- **AI:** OpenAI API
 
 ### Frontend
-- **React 18** with hooks
-- **Redux Toolkit** for state management
-- **Material-UI** for components
-- **Framer Motion** for animations
-- **Axios** for API calls
-- **React Router** for navigation
+- **Framework:** React 18
+- **State Management:** Redux Toolkit + RTK Query
+- **UI Library:** Material-UI (MUI)
+- **Real-time:** Supabase Realtime
+- **Build Tool:** Vite
 
-### Database
-- **PostgreSQL 15+** with pgvector extension
-- **HNSW** indexing for vector search
-- **Row Level Security** (RLS)
-- **Real-time subscriptions**
+## Quick Start
 
-### AI/ML
-- **OpenAI GPT-4** for chat completions
-- **OpenAI Embeddings** for vector search
-- **RAG** (Retrieval-Augmented Generation)
-- **Knowledge Graph** construction
+### Prerequisites
 
-## 📚 Documentation
+- Node.js 20+
+- PostgreSQL 15+ with pgvector extension
+- Redis 7+
+- Kafka (optional for development)
 
-- [Quick Start Guide](QUICK_START_GUIDE.md)
-- [Backend Documentation](BACKEND/README.md)
-- [Frontend Documentation](FRONTEND/README.md)
-- [Database Schema](DATABASE/README.md)
-- [Implementation Guide](IMPLEMENTATION_COMPLETE.md)
-- [Deployment Guide](DEPLOYMENT/DEPLOYMENT_GUIDE.md)
+### Backend Setup
 
-## 🔧 Development
-
-### Available Scripts
-
-```bash
-# Installation
-npm run install:all        # Install all dependencies
-npm run install:backend    # Install backend dependencies
-npm run install:frontend   # Install frontend dependencies
-
-# Development
-npm start                  # Start both frontend and backend
-npm run start:backend      # Start only backend
-npm run start:frontend     # Start only frontend
-
-# Database
-npm run db:migrate         # Run database migrations
-npm run db:generate        # Generate Prisma client
-npm run db:seed           # Seed database with sample data
-npm run db:studio         # Open Prisma Studio
-
-# Testing
-npm test                  # Run all tests
-npm run test:backend      # Run backend tests
-npm run test:frontend     # Run frontend tests
-
-# Linting
-npm run lint              # Run linting for all projects
-npm run lint:fix          # Fix linting issues
-
-# Build
-npm run build             # Build frontend for production
-
-# Utilities
-npm run setup             # Complete setup (install + migrate + seed)
-npm run clean             # Clean all node_modules
-npm run reset             # Clean and setup from scratch
-```
-
-### Environment Variables
-
-#### Backend (.env)
-```env
-DATABASE_URL="postgresql://username:password@localhost:5432/corporate_learning_assistant"
-NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
-SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
-OPENAI_API_KEY="sk-your-openai-api-key"
-PORT=3001
-NODE_ENV="development"
-```
-
-#### Frontend (.env)
-```env
-REACT_APP_API_URL="http://localhost:3001/api"
-REACT_APP_SUPABASE_URL="https://your-project.supabase.co"
-REACT_APP_SUPABASE_ANON_KEY="your-supabase-anon-key"
-```
-
-## 🧪 Testing
-
-### Backend Tests
 ```bash
 cd BACKEND
-npm test                  # Run all tests
-npm run test:watch        # Run tests in watch mode
-npm run test:coverage     # Run tests with coverage
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your configuration
+
+# Set up database
+npm run db:migrate
+npm run db:generate
+npm run db:seed
+
+# Start development server
+npm run dev
 ```
 
-### Frontend Tests
+### Frontend Setup
+
 ```bash
 cd FRONTEND
-npm test                  # Run unit tests
-npm run test:e2e          # Run E2E tests
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your configuration
+
+# Start development server
+npm run dev
 ```
 
-### Performance Tests
+### Database Setup
+
 ```bash
-# Load testing with K6
-cd tests/performance
-k6 run load-test.js
+cd DATABASE
+
+# Generate Prisma client
+npx prisma generate --schema=prisma/schema.prisma
+
+# Run migrations
+npx prisma migrate dev --schema=prisma/schema.prisma
+
+# Seed database
+node prisma/seed.js
 ```
 
-## 🚀 Deployment
+## Development
 
-### Docker
+### Running Tests
+
+**Backend:**
 ```bash
-# Build and run with Docker Compose
-docker-compose up -d
+# Prepare test environment (requires Docker)
+cp env.test.example .env.test
+npm run test:setup
+npm run test:migrate
+
+# Execute test suites
+npm test
+npm run test:unit
+npm run test:integration
+npm run test:coverage
+
+# Tear down test environment
+npm run test:teardown
 ```
 
-### Manual Deployment
-1. Build frontend: `npm run build`
-2. Deploy backend to your server
-3. Configure environment variables
-4. Run database migrations
-5. Start the application
+**Frontend:**
+```bash
+cd FRONTEND
+npm test
+npm run test:unit
+npm run test:e2e
+```
 
-### Cloud Deployment
-- **Frontend**: Vercel, Netlify, or AWS S3
-- **Backend**: Railway, Heroku, or AWS EC2
-- **Database**: Supabase, AWS RDS, or Google Cloud SQL
+### Test Infrastructure
 
-## 🤝 Contributing
+The backend test suites rely on PostgreSQL (pgvector), Redis, and Kafka. A ready-to-use Docker Compose file is provided:
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+```bash
+docker-compose -f docker-compose.test.yml up -d   # start services
+docker-compose -f docker-compose.test.yml down -v # stop and remove services
+```
 
-## 📄 License
+Ensure `.env.test` exists (copy from `env.test.example`) before running integration tests so that the test harness can connect to the infrastructure.
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### Code Quality
 
-## 🆘 Support
+```bash
+# Backend
+npm run lint
+npm run format
 
-- 📧 Email: support@corporate-learning.com
-- 💬 Discord: [Join our community](https://discord.gg/corporate-learning)
-- 📖 Documentation: [Read the docs](https://docs.corporate-learning.com)
-- 🐛 Issues: [Report bugs](https://github.com/your-org/corporate-learning-assistant/issues)
+# Frontend
+cd FRONTEND
+npm run lint
+npm run format
+```
 
----
+## API Documentation
 
-**Built with ❤️ by the Corporate Learning Team**
+See `FULLSTACK_TEMPLATES/Stage_02_System_and_Architecture/ENDPOINTS_SPEC.md` for complete API documentation.
 
+## License
 
+MIT

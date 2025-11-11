@@ -1,91 +1,14 @@
-# 📖 STAGE 01: USER STORIES TEMPLATE
+# Stage 01 — User Stories (Adaptive)
 
-> **Generate user stories in the format: As a [user], I want to [goal] so that [benefit]**
+## Process
+- Scan context for actors, goals, and constraints.
+- Generate or refine INVEST user stories.
+- Identify acceptance criteria and edge cases.
 
----
+## Output
+- User stories with acceptance criteria
+- Gaps list for follow-up questions
+- Save transcript: ./SESSION_LOGS/{{TIMESTAMP}}_user_stories_session.md
+- Update PROJECT_EVOLUTION_LOG.md with summary
 
-## 🎯 USER STORY GENERATION RULES
-
-### Format
-```
-As a [user type]
-I want to [action]
-So that [benefit/reason]
-```
-
-### Acceptance Criteria
-For each user story, define:
-- **Given:** Initial context
-- **When:** User action
-- **Then:** Expected outcome
-
-### Priority Levels
-- **P0:** Critical for MVP
-- **P1:** Important for MVP
-- **P2:** Nice-to-have
-
----
-
-## 📋 GENERATE USER STORIES
-
-**Based on requirements from REQUIREMENTS_TEMPLATE.prompt**
-
-### Example Structure
-
-#### User Story 1: User Authentication
-**As a** new user  
-**I want to** create an account with email and password  
-**So that** I can access personalized features
-
-**Acceptance Criteria:**
-- Given I'm a new user on the registration page
-- When I enter valid email and password
-- Then I receive confirmation email and can log in
-
-**Priority:** P0
-
----
-
-#### User Story 2: [Feature from requirements]
-**As a** [user type from Q3]
-**I want to** [action from MVP features]
-**So that** [benefit from problem statement]
-
-**Acceptance Criteria:**
-- Given [context]
-- When [action]
-- Then [outcome]
-
-**Priority:** P0/P1/P2
-
----
-
-## 📊 USER STORIES SUMMARY
-
-Generate a summary table:
-
-| ID | User Type | Action | Priority | Status |
-|----|-----------|--------|----------|--------|
-| 1 | New User | Create account | P0 | Planned |
-| 2 | ... | ... | ... | ... |
-
-**Total Stories:** [Count]  
-**P0 Stories:** [Count]  
-**P1 Stories:** [Count]  
-**P2 Stories:** [Count]
-
----
-
-## ✅ VALIDATION
-
-Before proceeding, ensure:
-- [ ] Each MVP feature has at least one user story
-- [ ] Acceptance criteria defined for all P0 stories
-- [ ] User stories are testable
-- [ ] Stories include user value (not just technical tasks)
-
----
-
-**File Output:** `user_stories.md`  
-**Next:** Proceed with remaining Stage 01 templates
 

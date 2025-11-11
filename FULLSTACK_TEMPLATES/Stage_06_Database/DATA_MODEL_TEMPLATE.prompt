@@ -1,62 +1,11 @@
-# 💾 STAGE 06: DATABASE DATA MODEL TEMPLATE
+# Stage 06 — Data Model
 
-> **Design database schema and relationships**
+## Process
+- Derive entities and relations from flows and APIs.
+- Define indexes, constraints, and retention.
 
----
+## Output
+- ERD and model descriptions
+- Update `PROJECT_EVOLUTION_LOG.md`
 
-## 🔍 ENTRY QUESTIONNAIRE
-
-1. **What entities need database tables?**
-   - Based on requirements: User, Product, Order, etc.
-
-2. **What are the relationships?**
-   - One-to-many, many-to-many
-   - Example: User has many Orders
-
-3. **What fields are needed for each entity?**
-   - List primary fields for each
-
----
-
-## 📝 SCHEMA GENERATION
-
-### Entity Template
-
-#### users
-```sql
-CREATE TABLE users (
-  id UUID PRIMARY KEY,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  name VARCHAR(255),
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-#### [Entity 2]
-[Similar structure]
-
----
-
-## 🔗 RELATIONSHIPS
-
-Document relationships:
-- User → Orders (One-to-Many)
-- [Other relationships]
-
----
-
-## ✅ VALIDATION
-
-- [ ] All entities have tables
-- [ ] Relationships documented
-- [ ] Indexes planned
-- [ ] Migrations planned
-
----
-
-**Template Version:** 1.0.0  
-**Stage:** 06/09  
-**Next:** Stage 07 - QA & Testing
 
