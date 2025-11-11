@@ -4,7 +4,7 @@ module.exports = {
     es2022: true,
     jest: true,
   },
-  extends: ['eslint:recommended', 'prettier'],
+  extends: ['eslint:recommended'],
   parserOptions: {
     ecmaVersion: 2022,
     sourceType: 'module',

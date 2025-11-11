@@ -9,7 +9,6 @@ module.exports = {
     'eslint:recommended',
     'plugin:react/recommended',
     'plugin:react-hooks/recommended',
-    'prettier',
   ],
   plugins: ['react', 'react-hooks'],
   parserOptions: {
