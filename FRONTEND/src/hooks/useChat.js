@@ -3,7 +3,7 @@
  */
 
 import { useSelector, useDispatch } from 'react-redux';
-import { addMessage, setLoading, setTyping, setError } from '../store/slices/chat.slice.js';
+import { addMessage, setTyping, setError } from '../store/slices/chat.slice.js';
 import { useSubmitQueryMutation } from '../store/api/ragApi.js';
 
 export const useChat = () => {
