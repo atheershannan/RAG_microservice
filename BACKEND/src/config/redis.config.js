@@ -17,42 +17,74 @@ let redisAvailable = false;
 if (redisEnabled) {
   try {
     redis = new Redis(redisUrl, {
-      retryStrategy: (times) => {
-        // Stop retrying after 3 attempts to avoid spam
-        if (times > 3) {
-          logger.warn('Redis: Giving up connection after 3 retries. Service will continue without Redis cache.');
-          return null; // Stop retrying
-        }
-        const delay = Math.min(times * 50, 2000);
-        return delay;
+      retryStrategy: () => {
+        // Never retry - stop immediately
+        return null;
       },
-      maxRetriesPerRequest: 1, // Only retry once per request
-      lazyConnect: true, // Don't connect immediately
+      maxRetriesPerRequest: 0, // Don't retry requests
+      lazyConnect: true, // Don't auto-connect
       enableOfflineQueue: false, // Don't queue commands if offline
+      connectTimeout: 2000, // 2 second timeout
+      enableReadyCheck: false, // Don't wait for ready
+      showFriendlyErrorStack: false,
     });
 
+    // Suppress all error events after first one
+    let errorLogged = false;
     redis.on('error', (err) => {
-      // Only log first error, then silence
-      if (!redisAvailable) {
-        logger.warn('Redis connection error (Redis is optional - service will work without it):', err.code || err.message);
+      if (!errorLogged) {
+        logger.warn('Redis connection error (Redis is optional - service will work without it). Disabling Redis...');
+        errorLogged = true;
         redisAvailable = false;
+        // Disconnect and stop trying
+        try {
+          redis.disconnect();
+        } catch (e) {
+          // Ignore disconnect errors
+        }
+        redis = null;
       }
     });
 
     redis.on('connect', () => {
       redisAvailable = true;
+      errorLogged = false;
       logger.info('Redis connected - caching enabled');
     });
 
     redis.on('ready', () => {
       redisAvailable = true;
+      errorLogged = false;
       logger.info('Redis ready - caching enabled');
     });
 
-    // Try to connect (non-blocking)
-    redis.connect().catch(() => {
+    // Try to connect with timeout (non-blocking)
+    const connectTimeout = setTimeout(() => {
+      if (!redisAvailable && redis) {
+        logger.warn('Redis connection timeout. Service will continue without Redis cache.');
+        try {
+          redis.disconnect();
+        } catch (e) {
+          // Ignore disconnect errors
+        }
+        redis = null;
+      }
+    }, 3000); // 3 second timeout
+
+    redis.connect().then(() => {
+      clearTimeout(connectTimeout);
+    }).catch(() => {
+      clearTimeout(connectTimeout);
       // Silently fail - Redis is optional
       redisAvailable = false;
+      if (redis) {
+        try {
+          redis.disconnect();
+        } catch (e) {
+          // Ignore disconnect errors
+        }
+        redis = null;
+      }
     });
   } catch (error) {
     logger.warn('Redis initialization failed (Redis is optional):', error.message);

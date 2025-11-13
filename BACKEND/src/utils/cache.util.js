@@ -1,9 +1,10 @@
 /**
  * Cache utility
  * Redis-based caching with TTL support
+ * Gracefully handles Redis unavailability
  */
 
-import { redis } from '../config/redis.config.js';
+import { redis, isRedisAvailable } from '../config/redis.config.js';
 import { logger } from './logger.util.js';
 
 /**
@@ -12,11 +13,14 @@ import { logger } from './logger.util.js';
  * @returns {Promise<string|null>} Cached value or null
  */
 async function get(key) {
+  if (!isRedisAvailable() || !redis) {
+    return null;
+  }
   try {
     const value = await redis.get(key);
     return value ? JSON.parse(value) : null;
   } catch (error) {
-    logger.error('Cache get error:', error);
+    // Silently fail - Redis is optional
     return null;
   }
 }
@@ -29,11 +33,14 @@ async function get(key) {
  * @returns {Promise<boolean>} Success status
  */
 async function set(key, value, ttlSeconds = 3600) {
+  if (!isRedisAvailable() || !redis) {
+    return false;
+  }
   try {
     await redis.setex(key, ttlSeconds, JSON.stringify(value));
     return true;
   } catch (error) {
-    logger.error('Cache set error:', error);
+    // Silently fail - Redis is optional
     return false;
   }
 }
@@ -44,11 +51,14 @@ async function set(key, value, ttlSeconds = 3600) {
  * @returns {Promise<boolean>} Success status
  */
 async function del(key) {
+  if (!isRedisAvailable() || !redis) {
+    return false;
+  }
   try {
     await redis.del(key);
     return true;
   } catch (error) {
-    logger.error('Cache delete error:', error);
+    // Silently fail - Redis is optional
     return false;
   }
 }
@@ -59,11 +69,14 @@ async function del(key) {
  * @returns {Promise<boolean>} Existence status
  */
 async function exists(key) {
+  if (!isRedisAvailable() || !redis) {
+    return false;
+  }
   try {
     const result = await redis.exists(key);
     return result === 1;
   } catch (error) {
-    logger.error('Cache exists error:', error);
+    // Silently fail - Redis is optional
     return false;
   }
 }
