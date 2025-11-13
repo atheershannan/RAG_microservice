@@ -32,37 +32,66 @@ async function runMigrations() {
     }
     
     const schemaPath = join(projectRoot, 'DATABASE', 'prisma', 'schema.prisma');
+    const migrationsPath = join(projectRoot, 'DATABASE', 'prisma', 'migrations');
     log.info(`Using schema: ${schemaPath}`);
     
-    // First, try to deploy existing migrations
+    // Check if migrations directory exists and has migrations
+    const fs = await import('fs');
+    let hasMigrations = false;
     try {
-      log.info('Attempting to deploy existing migrations...');
-      execSync(`npx prisma migrate deploy --schema=${schemaPath}`, {
-        stdio: 'inherit',
-        env: { ...process.env },
-        cwd: projectRoot,
-        shell: true,
-      });
-      log.info('✅ Migrations deployed successfully');
-      return;
-    } catch (deployError) {
-      // If no migrations exist, try db push (for initial setup)
-      log.warn('No migrations found or deploy failed, trying db push...');
-      log.warn(`Deploy error: ${deployError.message}`);
-      
+      if (fs.existsSync(migrationsPath)) {
+        const files = fs.readdirSync(migrationsPath);
+        hasMigrations = files.some(file => 
+          file !== '.gitkeep' && 
+          fs.statSync(join(migrationsPath, file)).isDirectory()
+        );
+      }
+    } catch (err) {
+      log.warn('Could not check migrations directory:', err.message);
+    }
+    
+    if (hasMigrations) {
+      // If migrations exist, try to deploy them
+      try {
+        log.info('Found migrations, attempting to deploy...');
+        execSync(`npx prisma migrate deploy --schema=${schemaPath}`, {
+          stdio: 'inherit',
+          env: { ...process.env },
+          cwd: projectRoot,
+          shell: true,
+          timeout: 60000, // 60 second timeout
+        });
+        log.info('✅ Migrations deployed successfully');
+        return;
+      } catch (deployError) {
+        log.error('Failed to deploy migrations:', deployError.message);
+        log.warn('Falling back to db push...');
+      }
+    } else {
+      log.info('No migrations found, using db push for initial setup...');
+    }
+    
+    // Fallback: Use db push if no migrations or deploy failed
+    try {
+      log.info('Pushing database schema...');
       execSync(`npx prisma db push --schema=${schemaPath} --accept-data-loss --skip-generate`, {
         stdio: 'inherit',
         env: { ...process.env },
         cwd: projectRoot,
         shell: true,
+        timeout: 60000, // 60 second timeout
       });
       log.info('✅ Database schema pushed successfully');
+    } catch (pushError) {
+      log.error('Failed to push schema:', pushError.message);
+      throw pushError;
     }
   } catch (error) {
     log.error('Migration failed:', error.message);
     log.error('Stack:', error.stack);
     // Don't exit - let the server start anyway (migrations might already be applied)
     log.warn('⚠️  Continuing with server start despite migration error');
+    log.warn('⚠️  Database might not be fully synced. Check logs above for details.');
   }
 }
 
