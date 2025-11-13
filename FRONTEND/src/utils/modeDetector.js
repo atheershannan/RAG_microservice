@@ -152,10 +152,10 @@ export const getModeSpecificResponse = (message, mode) => {
   // If user tries small talk in support mode, redirect to support topics
   if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
     if (mode === MODES.ASSESSMENT_SUPPORT) {
-      return "I'm in Assessment Support mode. I can help with creating exams, question banks, scoring logic, troubleshooting errors, and API usage. What do you need help with?";
+      return "⚠️ I'm in Assessment Support Mode - General chat is disabled. I can only help with assessment-related topics: creating exams, question banks, scoring logic, troubleshooting errors, and API usage. What assessment issue do you need help with?";
     }
     if (mode === MODES.DEVLAB_SUPPORT) {
-      return "I'm in DevLab Support mode. I can help with code execution, auto-grading, sandbox errors, submission workflows, GitHub integration, and environment debugging. How can I assist?";
+      return "⚠️ I'm in DevLab Support Mode - General chat is disabled. I can only help with DevLab-related topics: code execution, auto-grading, sandbox errors, submission workflows, GitHub integration, and environment debugging. What DevLab issue do you need help with?";
     }
   }
 
@@ -168,13 +168,27 @@ export const getModeSpecificResponse = (message, mode) => {
     }
   }
 
+  // Check for general chat attempts in support mode
+  const generalChatKeywords = ['how are you', 'what can you do', 'tell me about', 'explain', 'what is', 'who are you'];
+  const isGeneralChatAttempt = generalChatKeywords.some(keyword => lowerMessage.includes(keyword)) && 
+                                !lowerMessage.match(/(assessment|exam|test|scoring|grading|devlab|code|sandbox|submission)/i);
+
+  if (isGeneralChatAttempt) {
+    if (mode === MODES.ASSESSMENT_SUPPORT) {
+      return "⚠️ General chat is disabled in Assessment Support Mode. I can only help with assessment-related topics. Please ask about: exams, question banks, scoring, grading, or assessment API. Type 'exit support' to return to general chat.";
+    }
+    if (mode === MODES.DEVLAB_SUPPORT) {
+      return "⚠️ General chat is disabled in DevLab Support Mode. I can only help with DevLab-related topics. Please ask about: code execution, sandbox errors, submissions, GitHub integration, or environment issues. Type 'exit support' to return to general chat.";
+    }
+  }
+
   // Default support mode response
   if (mode === MODES.ASSESSMENT_SUPPORT) {
-    return "I'm focused on Assessment Support. I can help with creating exams, question banks, scoring logic, troubleshooting errors, and API usage. What specific issue do you need help with?";
+    return "I'm focused on Assessment Support. I can help with creating exams, question banks, scoring logic, troubleshooting errors, and API usage. What specific assessment issue do you need help with?";
   }
 
   if (mode === MODES.DEVLAB_SUPPORT) {
-    return "I'm focused on DevLab Support. I can help with code execution, auto-grading, sandbox errors, submission workflows, GitHub integration, and environment debugging. What specific issue do you need help with?";
+    return "I'm focused on DevLab Support. I can help with code execution, auto-grading, sandbox errors, submission workflows, GitHub integration, and environment debugging. What specific DevLab issue do you need help with?";
   }
 
   return `I understand you're asking about "${message}". Let me help you with that!`;

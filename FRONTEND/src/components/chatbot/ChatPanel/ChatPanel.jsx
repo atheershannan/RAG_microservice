@@ -95,7 +95,7 @@ const ChatPanel = ({
           </div>
 
           {/* Input */}
-          <ChatInput onSend={onSendMessage} disabled={isLoading} />
+          <ChatInput onSend={onSendMessage} disabled={isLoading} currentMode={currentMode} />
         </motion.div>
       )}
     </AnimatePresence>

@@ -15,6 +15,9 @@ const getModeInfo = (currentMode) => {
         status: 'Focused on assessment help',
         badge: 'Assessment',
         badgeColor: 'bg-blue-500',
+        borderColor: 'border-blue-400',
+        bgGradient: 'from-blue-500 to-blue-600',
+        warning: 'General chat disabled - Assessment support only',
       };
     case MODES.DEVLAB_SUPPORT:
       return {
@@ -22,6 +25,9 @@ const getModeInfo = (currentMode) => {
         status: 'Focused on DevLab help',
         badge: 'DevLab',
         badgeColor: 'bg-purple-500',
+        borderColor: 'border-purple-400',
+        bgGradient: 'from-purple-500 to-purple-600',
+        warning: 'General chat disabled - DevLab support only',
       };
     default:
       return {
@@ -29,6 +35,9 @@ const getModeInfo = (currentMode) => {
         status: 'Online and ready',
         badge: null,
         badgeColor: null,
+        borderColor: 'border-emerald-400',
+        bgGradient: 'from-emerald-500 to-emerald-600',
+        warning: null,
       };
   }
 };
@@ -38,10 +47,10 @@ const ChatHeader = ({ onClose, currentMode = MODES.GENERAL, status }) => {
   const isSupportMode = currentMode !== MODES.GENERAL;
 
   return (
-    <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white p-4 rounded-t-2xl">
+    <div className={`bg-gradient-to-r ${modeInfo.bgGradient} text-white p-4 rounded-t-2xl border-b-2 ${modeInfo.borderColor}`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3 flex-1">
-          <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+          <div className={`w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border-2 ${isSupportMode ? 'border-white/40' : ''}`}>
             {isSupportMode ? (
               <HiCog6Tooth className="w-6 h-6" />
             ) : (
@@ -51,7 +60,7 @@ const ChatHeader = ({ onClose, currentMode = MODES.GENERAL, status }) => {
           <div className="flex-1">
             <h2 className="text-lg font-semibold">{modeInfo.title}</h2>
             {isSupportMode && (
-              <p className="text-xs text-emerald-100 mt-1">
+              <p className="text-xs text-white/90 mt-1 font-medium">
                 Type "exit support" to return to general chat
               </p>
             )}
@@ -80,12 +89,24 @@ const ChatHeader = ({ onClose, currentMode = MODES.GENERAL, status }) => {
             <span className="font-medium">Status: {status || modeInfo.status}</span>
           </div>
           {modeInfo.badge && (
-            <span className={`${modeInfo.badgeColor} text-white text-xs font-bold px-2 py-1 rounded-full`}>
-              {modeInfo.badge}
+            <span className={`${modeInfo.badgeColor} text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg`}>
+              {modeInfo.badge} MODE
             </span>
           )}
         </div>
       </motion.div>
+
+      {/* Warning Banner for Support Mode */}
+      {isSupportMode && modeInfo.warning && (
+        <motion.div
+          className="mt-3 bg-yellow-500/20 border border-yellow-400/50 rounded-lg px-3 py-2 text-xs font-medium text-yellow-100"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          ⚠️ {modeInfo.warning}
+        </motion.div>
+      )}
     </div>
   );
 };
