@@ -31,6 +31,13 @@ async function runMigrations() {
       return;
     }
     
+    // Skip migrations if SKIP_MIGRATIONS is set (for faster deployment)
+    if (process.env.SKIP_MIGRATIONS === 'true') {
+      log.warn('⚠️  SKIP_MIGRATIONS=true - Skipping database migrations');
+      log.warn('⚠️  Make sure to run migrations manually or use db push');
+      return;
+    }
+    
     const schemaPath = join(projectRoot, 'DATABASE', 'prisma', 'schema.prisma');
     const migrationsPath = join(projectRoot, 'DATABASE', 'prisma', 'migrations');
     log.info(`Using schema: ${schemaPath}`);
@@ -65,51 +72,16 @@ async function runMigrations() {
         return;
       } catch (deployError) {
         log.error('Failed to deploy migrations:', deployError.message);
-        log.warn('Falling back to db push...');
+        log.warn('⚠️  Skipping db push for faster deployment. Run migrations manually.');
+        log.warn('💡 To run migrations: railway run npm run db:migrate:deploy');
+        return; // Don't fallback to db push - skip it
       }
     } else {
-      log.info('No migrations found, using db push for initial setup...');
+      log.info('No migrations found.');
+      log.warn('⚠️  Skipping db push for faster deployment. Run migrations manually.');
+      log.warn('💡 To create schema: railway run npx prisma db push --schema=./DATABASE/prisma/schema.prisma');
+      return; // Don't run db push - skip it
     }
-    
-    // Fallback: Use db push if no migrations or deploy failed
-    // For Railway, we'll skip the timeout and let it run, but start server anyway
-    log.info('Pushing database schema (running in background)...');
-    log.info('⚠️  Note: db push may take 5-10 minutes. Server will start regardless.');
-    
-    // Run db push asynchronously - don't wait for it
-    const { spawn } = await import('child_process');
-    const pushProcess = spawn('npx', [
-      'prisma',
-      'db',
-      'push',
-      '--schema=' + schemaPath,
-      '--accept-data-loss',
-      '--skip-generate'
-    ], {
-      stdio: 'inherit',
-      env: { ...process.env },
-      cwd: projectRoot,
-      shell: true,
-      detached: true,
-    });
-    
-    pushProcess.on('error', (error) => {
-      log.error('Failed to start schema push:', error.message);
-    });
-    
-    pushProcess.on('exit', (code) => {
-      if (code === 0) {
-        log.info('✅ Database schema pushed successfully (completed in background)');
-      } else {
-        log.warn(`⚠️  Schema push exited with code ${code}. Server is already running.`);
-      }
-    });
-    
-    // Unref so parent process can exit
-    pushProcess.unref();
-    
-    // Don't wait - start server immediately
-    log.info('⏩ Starting server while schema push runs in background...');
   } catch (error) {
     log.error('Migration failed:', error.message);
     log.error('Stack:', error.stack);
