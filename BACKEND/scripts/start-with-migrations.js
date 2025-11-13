@@ -65,11 +65,12 @@ async function runMigrations() {
         log.info(`Migrations path: ${migrationsPath}`);
         
         // First, generate Prisma client to ensure it's up to date
+        // Generate in BACKEND directory so it's in the right location
         log.info('Generating Prisma client...');
         execSync(`npx prisma generate --schema=${schemaPath}`, {
           stdio: 'inherit',
           env: { ...process.env },
-          cwd: projectRoot,
+          cwd: backendRoot, // Generate in BACKEND directory
           shell: true,
           timeout: 60000, // 1 minute timeout
         });
@@ -79,12 +80,15 @@ async function runMigrations() {
         log.info(`DATABASE_URL: ${process.env.DATABASE_URL ? 'Set (hidden)' : 'NOT SET'}`);
         
         try {
+          log.info('Starting migration deploy (this may take a few minutes)...');
+          log.info('Note: If this times out, migrations may need to be run manually');
+          
           execSync(`npx prisma migrate deploy --schema=${schemaPath}`, {
             stdio: 'inherit',
             env: { ...process.env },
             cwd: projectRoot,
             shell: true,
-            timeout: 180000, // 3 minute timeout for migrations
+            timeout: 300000, // 5 minute timeout for migrations
           });
           log.info('✅ Migrations deployed successfully');
           return;
