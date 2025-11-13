@@ -15,6 +15,8 @@ import { logger } from '../utils/logger.util.js';
  * @param {number} options.threshold - Minimum similarity threshold (default: 0.7)
  * @param {string} options.contentType - Filter by content type (optional)
  * @param {string} options.contentId - Filter by content ID (optional)
+ * @param {string} options.microserviceId - Filter by microservice ID (optional)
+ * @param {string[]} options.microserviceIds - Filter by multiple microservice IDs (optional)
  * @returns {Promise<Array>} Array of similar vector embeddings
  */
 export async function searchSimilarVectors(
@@ -22,7 +24,14 @@ export async function searchSimilarVectors(
   tenantId,
   options = {}
 ) {
-  const { limit = 5, threshold = 0.7, contentType, contentId } = options;
+  const { 
+    limit = 5, 
+    threshold = 0.7, 
+    contentType, 
+    contentId,
+    microserviceId,
+    microserviceIds 
+  } = options;
 
   try {
     const prisma = await getPrismaClient();
@@ -51,6 +60,21 @@ export async function searchSimilarVectors(
       paramIndex++;
     }
 
+    // Filter by single microservice
+    if (microserviceId) {
+      whereConditions.push(`microservice_id = $${paramIndex}`);
+      params.push(microserviceId);
+      paramIndex++;
+    }
+
+    // Filter by multiple microservices
+    if (microserviceIds && microserviceIds.length > 0) {
+      const placeholders = microserviceIds.map((_, idx) => `$${paramIndex + idx}`).join(', ');
+      whereConditions.push(`microservice_id IN (${placeholders})`);
+      params.push(...microserviceIds);
+      paramIndex += microserviceIds.length;
+    }
+
     // Add embedding and threshold to params
     const embeddingParamIndex = paramIndex;
     params.push(embeddingStr);
@@ -69,6 +93,7 @@ export async function searchSimilarVectors(
       SELECT 
         id,
         tenant_id,
+        microservice_id,
         content_id,
         content_type,
         content_text,
@@ -95,6 +120,7 @@ export async function searchSimilarVectors(
     return results.map((row) => ({
       id: row.id,
       tenantId: row.tenant_id,
+      microserviceId: row.microservice_id,
       contentId: row.content_id,
       contentType: row.content_type,
       contentText: row.content_text,

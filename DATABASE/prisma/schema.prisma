@@ -33,8 +33,40 @@ model Tenant {
   userProfiles        UserProfile[]
   auditLogs           AuditLog[]
   cacheEntries        CacheEntry[]
+  microservices       Microservice[]
 
   @@map("tenants")
+}
+
+// ============================================
+// MICROSERVICE MANAGEMENT
+// ============================================
+
+model Microservice {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  name        String   // e.g., "assessment", "devlab", "content", etc.
+  serviceId   String   @unique @map("service_id") // Unique identifier across all tenants
+  displayName String   @map("display_name")
+  description String?  @db.Text
+  apiEndpoint String?  @map("api_endpoint")
+  version     String?  @default("1.0.0")
+  isActive    Boolean  @default(true) @map("is_active")
+  settings    Json?    @default("{}")
+  metadata    Json?    @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vectorEmbeddings VectorEmbedding[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([serviceId])
+  @@index([name])
+  @@index([isActive])
+  @@map("microservices")
 }
 
 // ============================================
@@ -68,22 +100,25 @@ model Query {
 }
 
 model QuerySource {
-  id             String   @id @default(uuid())
-  queryId        String   @map("query_id")
-  sourceId       String   @map("source_id")
-  sourceType     String   @map("source_type")
-  title          String
-  contentSnippet String   @map("content_snippet") @db.Text
-  sourceUrl      String   @map("source_url")
-  relevanceScore Decimal  @map("relevance_score") @db.Decimal(3, 2)
-  metadata       Json?    @default("{}")
-  createdAt      DateTime @default(now()) @map("created_at")
+  id                String   @id @default(uuid())
+  queryId           String   @map("query_id")
+  sourceId          String   @map("source_id")
+  sourceType        String   @map("source_type")
+  sourceMicroservice String? @map("source_microservice") // Which microservice provided this source
+  title             String
+  contentSnippet    String   @map("content_snippet") @db.Text
+  sourceUrl         String   @map("source_url")
+  relevanceScore    Decimal  @map("relevance_score") @db.Decimal(3, 2)
+  metadata          Json?    @default("{}")
+  createdAt         DateTime @default(now()) @map("created_at")
 
   // Relations
   query Query @relation(fields: [queryId], references: [id], onDelete: Cascade)
 
   @@index([queryId])
   @@index([sourceId])
+  @@index([sourceMicroservice])
+  @@index([sourceType, sourceMicroservice])
   @@map("query_sources")
 }
 
@@ -112,23 +147,29 @@ model QueryRecommendation {
 // ============================================
 
 model VectorEmbedding {
-  id          String                      @id @default(uuid())
-  tenantId    String                      @map("tenant_id")
-  contentId   String                      @map("content_id")
-  contentType String                      @map("content_type")
-  embedding   Unsupported("vector(1536)") // pgvector type
-  contentText String                      @map("content_text") @db.Text
-  chunkIndex  Int                         @default(0) @map("chunk_index")
-  metadata    Json?                       @default("{}")
-  createdAt   DateTime                    @default(now()) @map("created_at")
-  updatedAt   DateTime                    @updatedAt @map("updated_at")
+  id             String                      @id @default(uuid())
+  tenantId       String                      @map("tenant_id")
+  microserviceId String?                    @map("microservice_id") // Which microservice this content came from
+  contentId      String                      @map("content_id")
+  contentType    String                      @map("content_type") // "document", "chunk", "kg_node", "query", etc.
+  embedding      Unsupported("vector(1536)") // pgvector type
+  contentText    String                      @map("content_text") @db.Text
+  chunkIndex     Int                         @default(0) @map("chunk_index")
+  metadata       Json?                       @default("{}")
+  createdAt      DateTime                    @default(now()) @map("created_at")
+  updatedAt      DateTime                    @updatedAt @map("updated_at")
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  microservice Microservice? @relation(fields: [microserviceId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([contentId])
   @@index([tenantId, contentId])
+  @@index([microserviceId])
+  @@index([contentType])
+  @@index([tenantId, microserviceId])
+  @@index([tenantId, contentType, microserviceId]) // Composite index for filtered searches
   @@map("vector_embeddings")
 }
 

@@ -113,6 +113,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       sources = similarVectors.map((vec) => ({
         sourceId: vec.contentId,
         sourceType: vec.contentType,
+        sourceMicroservice: vec.microserviceId, // Track which microservice provided this source
         title: vec.metadata?.title || `${vec.contentType}:${vec.contentId}`,
         contentSnippet: vec.contentText.substring(0, 200),
         sourceUrl: vec.metadata?.url || `/${vec.contentType}/${vec.contentId}`,
@@ -317,6 +318,7 @@ async function saveQueryToDatabase({
           create: sources.map((source) => ({
             sourceId: source.sourceId,
             sourceType: source.sourceType,
+            sourceMicroservice: source.sourceMicroservice, // Track which microservice provided this source
             title: source.title,
             contentSnippet: source.contentSnippet,
             sourceUrl: source.sourceUrl,
