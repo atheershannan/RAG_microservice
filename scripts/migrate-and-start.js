@@ -28,7 +28,7 @@ async function runMigrations() {
       throw new Error('DATABASE_URL is required');
     }
     
-    const schemaPath = join(projectRoot, 'prisma', 'schema.prisma');
+    const schemaPath = join(projectRoot, 'DATABASE', 'prisma', 'schema.prisma');
     log.info(`Using schema: ${schemaPath}`);
     
     // First, try to deploy existing migrations

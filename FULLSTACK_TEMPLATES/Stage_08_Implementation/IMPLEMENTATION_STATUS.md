@@ -27,7 +27,11 @@
 - ✅ Request validation and error handling
 - ✅ Redis caching (optional - service works without it)
 - ✅ Improved error logging with detailed request information
-- ✅ Created REDIS_EXPLANATION.md and TROUBLESHOOTING.md guides
+- ✅ CORS configuration with multiple origins support (localhost + Vercel)
+- ✅ Dynamic origin checking with logging for debugging
+- ✅ Created REDIS_EXPLANATION.md, REDIS_ENV_VARIABLES.md, HOW_TO_GET_REDIS_URL.md guides
+- ✅ Created CORS_SETUP.md and CORS_FIX_INSTRUCTIONS.md guides
+- ✅ Created TROUBLESHOOTING.md guide
 
 **In Progress:**
 - ⏳ Phase 1: Foundation – finalize database readiness

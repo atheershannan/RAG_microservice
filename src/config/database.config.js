@@ -32,4 +32,7 @@ async function getPrismaClient() {
   return prismaInstance;
 }
 
-export { getPrismaClient };
+// Export prisma as a promise for backward compatibility
+const prisma = getPrismaClient();
+
+export { getPrismaClient, prisma };

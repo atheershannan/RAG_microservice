@@ -17,16 +17,16 @@
     "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js --ci --coverage --maxWorkers=2",
     "test:setup": "docker-compose -f docker-compose.test.yml up -d",
     "test:teardown": "docker-compose -f docker-compose.test.yml down -v",
-    "test:migrate": "npx prisma migrate deploy --schema=./prisma/schema.prisma",
+    "test:migrate": "npx prisma migrate deploy --schema=./DATABASE/prisma/schema.prisma",
     "lint": "eslint src tests",
     "lint:fix": "eslint src tests --fix",
     "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\"",
     "format:check": "prettier --check \"src/**/*.js\" \"tests/**/*.js\"",
-    "db:migrate": "prisma migrate dev",
-    "db:migrate:deploy": "prisma migrate deploy",
-    "db:generate": "prisma generate",
-    "db:seed": "node prisma/seed.js",
-    "db:studio": "prisma studio",
+    "db:migrate": "prisma migrate dev --schema=./DATABASE/prisma/schema.prisma",
+    "db:migrate:deploy": "prisma migrate deploy --schema=./DATABASE/prisma/schema.prisma",
+    "db:generate": "prisma generate --schema=./DATABASE/prisma/schema.prisma",
+    "db:seed": "node DATABASE/prisma/seed.js",
+    "db:studio": "prisma studio --schema=./DATABASE/prisma/schema.prisma",
     "proto:generate": "node scripts/generate-proto.js"
   },
   "keywords": [
@@ -63,7 +63,7 @@
     "supertest": "^6.3.3"
   },
   "prisma": {
-    "seed": "node prisma/seed.js"
+    "seed": "node DATABASE/prisma/seed.js"
   },
   "engines": {
     "node": ">=20.0.0",

@@ -1,16 +1,42 @@
 /**
  * Database configuration
- * Prisma client setup
+ * Prisma client setup with lazy loading
  * 
  * Note: Prisma schema is located at ../DATABASE/prisma/schema.prisma
  * Run: npm run db:generate (from BACKEND/) to generate Prisma client
  */
 
-import { PrismaClient } from '@prisma/client';
+let prismaInstance = null;
 
-const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-});
+async function createPrismaClient() {
+  if (process.env.SKIP_PRISMA === 'true') {
+    return {
+      accessControlRule: {
+        findMany: async () => [],
+      },
+      auditLog: {
+        create: async () => {},
+      },
+      $transaction: async () => {},
+    };
+  }
 
-export { prisma };
+  const { PrismaClient } = await import('@prisma/client');
+  return new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
+}
+
+async function getPrismaClient() {
+  if (!prismaInstance) {
+    prismaInstance = await createPrismaClient();
+  }
+
+  return prismaInstance;
+}
+
+// Export prisma as a promise for backward compatibility
+const prisma = getPrismaClient();
+
+export { getPrismaClient, prisma };
 
