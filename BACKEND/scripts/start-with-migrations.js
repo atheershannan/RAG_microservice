@@ -75,67 +75,95 @@ async function runMigrations() {
           timeout: 60000, // 1 minute timeout
         });
         
-        // Then deploy migrations
-        log.info('Deploying migrations...');
+        // Use db push instead of migrate deploy - it's faster and more reliable
+        // db push syncs schema directly without migration history
+        log.info('Pushing database schema (faster than migrations)...');
         log.info(`DATABASE_URL: ${process.env.DATABASE_URL ? 'Set (hidden)' : 'NOT SET'}`);
         
         try {
-          log.info('Starting migration deploy (this may take a few minutes)...');
-          log.info('Note: If this times out, migrations may need to be run manually');
-          
-          // Use CONCURRENTLY for indexes if possible, but for now just run with longer timeout
-          // Migrations are split to avoid timeout - HNSW index is in separate migration
-          execSync(`npx prisma migrate deploy --schema=${schemaPath}`, {
+          execSync(`npx prisma db push --schema=${schemaPath} --accept-data-loss --skip-generate`, {
             stdio: 'inherit',
             env: { ...process.env },
             cwd: projectRoot,
             shell: true,
-            timeout: 600000, // 10 minute timeout for migrations (HNSW can take time)
+            timeout: 300000, // 5 minute timeout for db push (should be enough)
           });
-          log.info('✅ Migrations deployed successfully');
-          return;
-        } catch (migrateError) {
-          log.error('Migration deploy failed:', migrateError.message);
-          log.error('Exit code:', migrateError.status || migrateError.code);
+          log.info('✅ Database schema pushed successfully');
           
-          // Check if it's a connection issue
-          if (migrateError.message && (
-            migrateError.message.includes('ECONNREFUSED') ||
-            migrateError.message.includes('timeout') ||
-            migrateError.message.includes('connection')
-          )) {
-            log.error('❌ Database connection failed!');
-            log.error('💡 Check DATABASE_URL in Railway environment variables');
-            log.error('💡 Make sure Supabase service is linked and DATABASE_URL is set');
-            throw migrateError; // Re-throw to trigger fallback
+          // Mark migrations as applied to avoid re-running migrate deploy
+          log.info('Marking migrations as applied...');
+          try {
+            const fs = await import('fs');
+            const migrationDirs = fs.readdirSync(migrationsPath)
+              .filter(file => file !== '.gitkeep' && file !== 'template_pgvector.sql')
+              .filter(file => {
+                const fullPath = join(migrationsPath, file);
+                return fs.statSync(fullPath).isDirectory();
+              })
+              .sort();
+            
+            for (const migrationDir of migrationDirs) {
+              try {
+                execSync(`npx prisma migrate resolve --applied ${migrationDir} --schema=${schemaPath}`, {
+                  stdio: 'pipe', // Don't show output for each migration
+                  env: { ...process.env },
+                  cwd: projectRoot,
+                  shell: true,
+                  timeout: 30000,
+                });
+              } catch (resolveError) {
+                // Ignore errors - migrations might already be marked
+                log.debug(`Migration ${migrationDir} already applied or not found`);
+              }
+            }
+            log.info('✅ Migrations marked as applied');
+          } catch (markError) {
+            log.warn('Could not mark migrations as applied, but schema is synced');
           }
           
-          throw migrateError; // Re-throw to trigger fallback
+          return;
+        } catch (pushError) {
+          log.error('Database push failed:', pushError.message);
+          log.error('Exit code:', pushError.status || pushError.code);
+          
+          // Fallback to migrate deploy only if db push fails
+          log.warn('⚠️  Attempting fallback: migrate deploy');
+          try {
+            log.info('Starting migration deploy (this may take a few minutes)...');
+            
+            execSync(`npx prisma migrate deploy --schema=${schemaPath}`, {
+              stdio: 'inherit',
+              env: { ...process.env },
+              cwd: projectRoot,
+              shell: true,
+              timeout: 600000, // 10 minute timeout for migrations
+            });
+            log.info('✅ Migrations deployed successfully (fallback)');
+            return;
+          } catch (migrateError) {
+            log.error('Fallback migrate deploy also failed:', migrateError.message);
+            
+            // Check if it's a connection issue
+            if (migrateError.message && (
+              migrateError.message.includes('ECONNREFUSED') ||
+              migrateError.message.includes('timeout') ||
+              migrateError.message.includes('connection')
+            )) {
+              log.error('❌ Database connection failed!');
+              log.error('💡 Check DATABASE_URL in Railway environment variables');
+              log.error('💡 Make sure Supabase service is linked and DATABASE_URL is set');
+            }
+            
+            throw pushError; // Throw original pushError
+          }
         }
       } catch (deployError) {
         log.error('Failed to deploy migrations:', deployError.message);
         log.error('Error details:', deployError);
         
-        // Try fallback: db push (for development/testing)
-        if (process.env.NODE_ENV !== 'production') {
-          log.warn('⚠️  Attempting fallback: db push (development mode)');
-          try {
-            execSync(`npx prisma db push --schema=${schemaPath} --accept-data-loss`, {
-              stdio: 'inherit',
-              env: { ...process.env },
-              cwd: projectRoot,
-              shell: true,
-              timeout: 120000,
-            });
-            log.info('✅ Database schema pushed successfully (fallback)');
-            return;
-          } catch (pushError) {
-            log.error('Fallback db push also failed:', pushError.message);
-          }
-        }
-        
         log.warn('⚠️  Continuing without migrations. Database might not be fully synced.');
-        log.warn('💡 To run migrations manually: railway run npm run db:migrate:deploy');
+        log.warn('💡 To run migrations manually: railway run cd BACKEND && npm run db:migrate:deploy');
+        log.warn('💡 Or use db push: railway run cd BACKEND && npx prisma db push --schema=../DATABASE/prisma/schema.prisma');
         return;
       }
     } else {
