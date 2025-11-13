@@ -9,6 +9,7 @@ import { errorHandler, notFoundHandler } from './middleware/error-handler.middle
 import { logger } from './utils/logger.util.js';
 import queryRoutes from './routes/query.routes.js';
 import microserviceSupportRoutes from './routes/microserviceSupport.routes.js';
+import recommendationsRoutes from './routes/recommendations.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -35,6 +36,7 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/v1', queryRoutes);
+app.use('/api/v1', recommendationsRoutes);
 app.use('/api', microserviceSupportRoutes);
 
 // Error handling
@@ -44,6 +46,11 @@ app.use(errorHandler);
 // Start server
 app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
+  logger.info(`Health check: http://localhost:${PORT}/health`);
+  logger.info(`Query endpoint: http://localhost:${PORT}/api/v1/query`);
+  logger.info(`Assessment support: http://localhost:${PORT}/api/assessment/support`);
+  logger.info(`DevLab support: http://localhost:${PORT}/api/devlab/support`);
+  logger.info(`Recommendations: http://localhost:${PORT}/api/v1/personalized/recommendations/:userId`);
 });
 
 

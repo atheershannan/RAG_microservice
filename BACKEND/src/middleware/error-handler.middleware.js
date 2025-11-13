@@ -40,6 +40,14 @@ export function errorHandler(err, req, res, next) {
  * @param {Function} next - Express next function
  */
 export function notFoundHandler(req, res, next) {
+  // Log 404 errors for debugging
+  logger.warn('404 Not Found', {
+    method: req.method,
+    path: req.path,
+    url: req.url,
+    query: req.query,
+  });
+  
   res.status(404).json({
     error: {
       message: 'Not Found',
