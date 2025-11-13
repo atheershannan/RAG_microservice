@@ -1,5 +1,14 @@
 -- Enable pgvector extension
-CREATE EXTENSION IF NOT EXISTS vector;
+-- Note: In Supabase, this might need to be enabled via SQL Editor first
+-- If this fails, enable it manually: CREATE EXTENSION IF NOT EXISTS vector;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_extension WHERE extname = 'vector'
+  ) THEN
+    CREATE EXTENSION vector;
+  END IF;
+END $$;
 
 -- Create HNSW index for vector similarity search
 -- This index is critical for fast vector similarity queries

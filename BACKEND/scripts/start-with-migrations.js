@@ -76,15 +76,36 @@ async function runMigrations() {
         
         // Then deploy migrations
         log.info('Deploying migrations...');
-        execSync(`npx prisma migrate deploy --schema=${schemaPath}`, {
-          stdio: 'inherit',
-          env: { ...process.env },
-          cwd: projectRoot,
-          shell: true,
-          timeout: 120000, // 2 minute timeout for migrations
-        });
-        log.info('✅ Migrations deployed successfully');
-        return;
+        log.info(`DATABASE_URL: ${process.env.DATABASE_URL ? 'Set (hidden)' : 'NOT SET'}`);
+        
+        try {
+          execSync(`npx prisma migrate deploy --schema=${schemaPath}`, {
+            stdio: 'inherit',
+            env: { ...process.env },
+            cwd: projectRoot,
+            shell: true,
+            timeout: 180000, // 3 minute timeout for migrations
+          });
+          log.info('✅ Migrations deployed successfully');
+          return;
+        } catch (migrateError) {
+          log.error('Migration deploy failed:', migrateError.message);
+          log.error('Exit code:', migrateError.status || migrateError.code);
+          
+          // Check if it's a connection issue
+          if (migrateError.message && (
+            migrateError.message.includes('ECONNREFUSED') ||
+            migrateError.message.includes('timeout') ||
+            migrateError.message.includes('connection')
+          )) {
+            log.error('❌ Database connection failed!');
+            log.error('💡 Check DATABASE_URL in Railway environment variables');
+            log.error('💡 Make sure Supabase service is linked and DATABASE_URL is set');
+            throw migrateError; // Re-throw to trigger fallback
+          }
+          
+          throw migrateError; // Re-throw to trigger fallback
+        }
       } catch (deployError) {
         log.error('Failed to deploy migrations:', deployError.message);
         log.error('Error details:', deployError);
