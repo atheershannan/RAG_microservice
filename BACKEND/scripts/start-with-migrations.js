@@ -51,12 +51,14 @@ async function runMigrations() {
       // Check connection type
       if (dbUrl.includes(':6543')) {
         log.info('Using Supabase connection pooler (port 6543)');
-        log.warn('⚠️  Pooler can cause "prepared statement" errors with migrations');
-        log.warn('💡 If you get prepared statement errors, try direct connection (5432)');
+        log.warn('⚠️  Transaction Mode Pooler can cause migration timeouts!');
+        log.warn('💡 RECOMMENDED: Use Session Mode Pooler for migrations');
+        log.warn('💡 In Supabase Dashboard → Settings → Database → Connection string → Session mode');
+        log.warn('💡 Or run migrations manually in Supabase SQL Editor (most reliable)');
+        log.warn('💡 See: DATABASE/FINAL_MIGRATION_FIX.md for details');
       } else if (dbUrl.includes(':5432')) {
         log.info('Using Supabase direct connection (port 5432)');
-        log.warn('⚠️  Direct connection may require IP allowlist configuration');
-        log.warn('💡 If connection fails, try pooler (6543) instead');
+        log.info('✅ Direct connection is better for migrations');
       } else if (dbUrl.includes('db.') && dbUrl.includes('.supabase.co')) {
         log.warn('⚠️  Detected Supabase direct connection URL');
         log.warn('💡 This may require IP allowlist or may not be accessible from Railway');
@@ -124,14 +126,22 @@ async function runMigrations() {
         log.info('Deploying migrations...');
         log.info(`DATABASE_URL: ${process.env.DATABASE_URL ? 'Set (hidden)' : 'NOT SET'}`);
         log.info('Using migrate deploy (more reliable for pgvector)');
+        log.info('⏳ This may take 2-5 minutes. Please wait...');
+        
+        // Set PRISMA_CLI_QUERY_ENGINE_TYPE to avoid prepared statement issues
+        const env = {
+          ...process.env,
+          PRISMA_CLI_QUERY_ENGINE_TYPE: 'library', // Use library engine instead of binary
+        };
         
         try {
           execSync(`npx prisma migrate deploy --schema=${schemaPath}`, {
             stdio: 'inherit',
-            env: { ...process.env },
+            env: env,
             cwd: projectRoot,
             shell: true,
             timeout: 600000, // 10 minute timeout for migrations
+            maxBuffer: 10 * 1024 * 1024, // 10MB buffer for output
           });
           log.info('✅ Migrations deployed successfully');
           return;

@@ -1,21 +1,7 @@
--- Enable pgvector extension
--- Note: In Supabase, this should be enabled via SQL Editor first
--- Run: CREATE EXTENSION IF NOT EXISTS vector;
--- This migration assumes pgvector is already enabled
--- If not enabled, this will fail gracefully and can be enabled manually
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_extension WHERE extname = 'vector'
-  ) THEN
-    -- Try to create extension, but don't fail if it requires superuser
-    BEGIN
-      CREATE EXTENSION vector;
-    EXCEPTION WHEN OTHERS THEN
-      RAISE NOTICE 'pgvector extension could not be created. Please enable it manually in Supabase SQL Editor: CREATE EXTENSION IF NOT EXISTS vector;';
-    END;
-  END IF;
-END $$;
+-- Note: pgvector extension must be enabled BEFORE running this migration
+-- Run in Supabase SQL Editor: CREATE EXTENSION IF NOT EXISTS vector;
+-- This migration does NOT create the extension to avoid prepared statement errors
+-- with Supabase connection pooling
 
 -- Note: HNSW index creation is deferred to avoid timeout
 -- Create it manually after migration or in a separate migration
