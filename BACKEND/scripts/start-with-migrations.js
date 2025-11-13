@@ -83,12 +83,14 @@ async function runMigrations() {
           log.info('Starting migration deploy (this may take a few minutes)...');
           log.info('Note: If this times out, migrations may need to be run manually');
           
+          // Use CONCURRENTLY for indexes if possible, but for now just run with longer timeout
+          // Migrations are split to avoid timeout - HNSW index is in separate migration
           execSync(`npx prisma migrate deploy --schema=${schemaPath}`, {
             stdio: 'inherit',
             env: { ...process.env },
             cwd: projectRoot,
             shell: true,
-            timeout: 300000, // 5 minute timeout for migrations
+            timeout: 600000, // 10 minute timeout for migrations (HNSW can take time)
           });
           log.info('✅ Migrations deployed successfully');
           return;

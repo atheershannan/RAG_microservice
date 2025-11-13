@@ -1,21 +1,28 @@
 -- Enable pgvector extension
--- Note: In Supabase, this might need to be enabled via SQL Editor first
--- If this fails, enable it manually: CREATE EXTENSION IF NOT EXISTS vector;
+-- Note: In Supabase, this should be enabled via SQL Editor first
+-- Run: CREATE EXTENSION IF NOT EXISTS vector;
+-- This migration assumes pgvector is already enabled
+-- If not enabled, this will fail gracefully and can be enabled manually
 DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_extension WHERE extname = 'vector'
   ) THEN
-    CREATE EXTENSION vector;
+    -- Try to create extension, but don't fail if it requires superuser
+    BEGIN
+      CREATE EXTENSION vector;
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'pgvector extension could not be created. Please enable it manually in Supabase SQL Editor: CREATE EXTENSION IF NOT EXISTS vector;';
+    END;
   END IF;
 END $$;
 
--- Create HNSW index for vector similarity search
--- This index is critical for fast vector similarity queries
-CREATE INDEX IF NOT EXISTS idx_vector_embeddings_embedding_hnsw 
-ON vector_embeddings 
-USING hnsw (embedding vector_cosine_ops)
-WITH (m = 16, ef_construction = 64);
+-- Note: HNSW index creation is deferred to avoid timeout
+-- Create it manually after migration or in a separate migration
+-- CREATE INDEX IF NOT EXISTS idx_vector_embeddings_embedding_hnsw 
+-- ON vector_embeddings 
+-- USING hnsw (embedding vector_cosine_ops)
+-- WITH (m = 16, ef_construction = 64);
 
 -- Create GIN indexes for JSONB columns (for better query performance)
 CREATE INDEX IF NOT EXISTS idx_kg_nodes_properties_gin 
