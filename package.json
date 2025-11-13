@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node scripts/migrate-and-start.js",
+    "start:only": "node src/index.js",
     "dev": "node --watch src/index.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=tests/unit",
