@@ -59,7 +59,7 @@ async function runMigrations() {
           env: { ...process.env },
           cwd: projectRoot,
           shell: true,
-          timeout: 60000, // 60 second timeout
+          timeout: 120000, // 2 minute timeout for migrations
         });
         log.info('✅ Migrations deployed successfully');
         return;
@@ -74,16 +74,24 @@ async function runMigrations() {
     // Fallback: Use db push if no migrations or deploy failed
     try {
       log.info('Pushing database schema...');
+      log.info('This may take a few minutes if creating many tables...');
       execSync(`npx prisma db push --schema=${schemaPath} --accept-data-loss --skip-generate`, {
         stdio: 'inherit',
         env: { ...process.env },
         cwd: projectRoot,
         shell: true,
-        timeout: 60000, // 60 second timeout
+        timeout: 300000, // 5 minute timeout for initial schema push
       });
       log.info('✅ Database schema pushed successfully');
     } catch (pushError) {
       log.error('Failed to push schema:', pushError.message);
+      if (pushError.signal === 'SIGTERM' || pushError.code === 'ETIMEDOUT') {
+        log.error('⚠️  Schema push timed out. This might be due to:');
+        log.error('   - Network issues connecting to Supabase');
+        log.error('   - Database is locked by another operation');
+        log.error('   - Creating many tables takes longer than expected');
+        log.warn('💡 Try running migrations manually or check database connection');
+      }
       throw pushError;
     }
   } catch (error) {
