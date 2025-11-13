@@ -50,3 +50,4 @@ The widget can be embedded in any HTML page. See `public/embedding-snippet.html`
 
 
 
+
