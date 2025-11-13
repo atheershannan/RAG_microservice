@@ -27,7 +27,117 @@ async function main() {
 
   console.log('✅ Created tenant:', tenant.domain);
 
-  // 2. Create sample access control rules
+  // 2. Create sample microservices (9-10 microservices)
+  const microservices = [
+    {
+      name: 'assessment',
+      serviceId: 'assessment',
+      displayName: 'Assessment Service',
+      description: 'Handles assessments, quizzes, and evaluations',
+      apiEndpoint: 'https://assessment.educore.local/api',
+      version: '1.0.0',
+      isActive: true,
+    },
+    {
+      name: 'devlab',
+      serviceId: 'devlab',
+      displayName: 'DevLab Service',
+      description: 'Development lab environment and coding exercises',
+      apiEndpoint: 'https://devlab.educore.local/api',
+      version: '1.0.0',
+      isActive: true,
+    },
+    {
+      name: 'content',
+      serviceId: 'content',
+      displayName: 'Content Management Service',
+      description: 'Manages learning content, courses, and materials',
+      apiEndpoint: 'https://content.educore.local/api',
+      version: '1.0.0',
+      isActive: true,
+    },
+    {
+      name: 'analytics',
+      serviceId: 'analytics',
+      displayName: 'Analytics Service',
+      description: 'Learning analytics and progress tracking',
+      apiEndpoint: 'https://analytics.educore.local/api',
+      version: '1.0.0',
+      isActive: true,
+    },
+    {
+      name: 'user-management',
+      serviceId: 'user-management',
+      displayName: 'User Management Service',
+      description: 'User accounts, profiles, and authentication',
+      apiEndpoint: 'https://users.educore.local/api',
+      version: '1.0.0',
+      isActive: true,
+    },
+    {
+      name: 'notification',
+      serviceId: 'notification',
+      displayName: 'Notification Service',
+      description: 'Sends notifications and alerts to users',
+      apiEndpoint: 'https://notifications.educore.local/api',
+      version: '1.0.0',
+      isActive: true,
+    },
+    {
+      name: 'reporting',
+      serviceId: 'reporting',
+      displayName: 'Reporting Service',
+      description: 'Generates reports and analytics dashboards',
+      apiEndpoint: 'https://reporting.educore.local/api',
+      version: '1.0.0',
+      isActive: true,
+    },
+    {
+      name: 'integration',
+      serviceId: 'integration',
+      displayName: 'Integration Service',
+      description: 'Third-party integrations and API management',
+      apiEndpoint: 'https://integration.educore.local/api',
+      version: '1.0.0',
+      isActive: true,
+    },
+    {
+      name: 'ai-assistant',
+      serviceId: 'ai-assistant',
+      displayName: 'AI Assistant Service',
+      description: 'RAG microservice - Contextual AI assistant (this service)',
+      apiEndpoint: 'https://ai-assistant.educore.local/api',
+      version: '1.0.0',
+      isActive: true,
+    },
+    {
+      name: 'gateway',
+      serviceId: 'gateway',
+      displayName: 'API Gateway',
+      description: 'API Gateway for routing and load balancing',
+      apiEndpoint: 'https://gateway.educore.local/api',
+      version: '1.0.0',
+      isActive: true,
+    },
+  ];
+
+  const createdMicroservices = {};
+  for (const microservice of microservices) {
+    const created = await prisma.microservice.upsert({
+      where: { serviceId: microservice.serviceId },
+      update: {},
+      create: {
+        ...microservice,
+        tenantId: tenant.id,
+        settings: {},
+        metadata: {},
+      },
+    });
+    createdMicroservices[microservice.serviceId] = created;
+    console.log(`✅ Created microservice: ${created.displayName}`);
+  }
+
+  // 3. Create sample access control rules
   const rbacRules = [
     {
       ruleType: 'RBAC',
@@ -69,7 +179,7 @@ async function main() {
 
   console.log('✅ Created access control rules');
 
-  // 3. Create sample user profiles
+  // 4. Create sample user profiles
   const users = [
     {
       userId: 'learner-001',
@@ -112,7 +222,7 @@ async function main() {
 
   console.log('✅ Created user profiles');
 
-  // 4. Create sample knowledge graph nodes
+  // 5. Create sample knowledge graph nodes
   const courseNode = await prisma.knowledgeGraphNode.upsert({
     where: { nodeId: 'course:js-basics-101' },
     update: {},
@@ -162,7 +272,7 @@ async function main() {
 
   console.log('✅ Created knowledge graph nodes');
 
-  // 5. Create sample knowledge graph edges
+  // 6. Create sample knowledge graph edges
   await prisma.knowledgeGraphEdge.createMany({
     data: [
       {
@@ -202,7 +312,128 @@ async function main() {
 
   console.log('✅ Created knowledge graph edges');
 
-  // 6. Create sample queries
+  // 7. Create sample vector embeddings with microservice_id
+  // Note: Using raw SQL because Prisma doesn't support vector type directly
+  console.log('Creating sample vector embeddings...');
+  
+  const sampleEmbeddings = [
+    {
+      contentId: 'assessment-001',
+      contentType: 'assessment',
+      microserviceId: createdMicroservices['assessment'].id,
+      contentText: 'JavaScript Fundamentals Assessment: Test your knowledge of variables, functions, and control flow in JavaScript.',
+      chunkIndex: 0,
+      // Mock embedding (1536 dimensions) - in real scenario, use OpenAI embeddings
+      embedding: Array(1536).fill(0).map(() => Math.random() * 2 - 1), // Random values between -1 and 1
+      metadata: {
+        title: 'JavaScript Fundamentals Assessment',
+        difficulty: 'beginner',
+        duration: 1800,
+      },
+    },
+    {
+      contentId: 'devlab-exercise-001',
+      contentType: 'exercise',
+      microserviceId: createdMicroservices['devlab'].id,
+      contentText: 'Build a simple calculator using JavaScript. Practice DOM manipulation and event handling.',
+      chunkIndex: 0,
+      embedding: Array(1536).fill(0).map(() => Math.random() * 2 - 1),
+      metadata: {
+        title: 'JavaScript Calculator Exercise',
+        type: 'coding',
+        difficulty: 'intermediate',
+      },
+    },
+    {
+      contentId: 'course-js-basics-101',
+      contentType: 'document',
+      microserviceId: createdMicroservices['content'].id,
+      contentText: 'JavaScript Basics Course: Learn the fundamentals of JavaScript programming including variables, data types, functions, and control structures.',
+      chunkIndex: 0,
+      embedding: Array(1536).fill(0).map(() => Math.random() * 2 - 1),
+      metadata: {
+        title: 'JavaScript Basics Course',
+        courseId: 'js-basics-101',
+        section: 'introduction',
+      },
+    },
+    {
+      contentId: 'course-js-basics-101',
+      contentType: 'document',
+      microserviceId: createdMicroservices['content'].id,
+      contentText: 'Advanced JavaScript Topics: Explore closures, promises, async/await, and modern ES6+ features.',
+      chunkIndex: 1,
+      embedding: Array(1536).fill(0).map(() => Math.random() * 2 - 1),
+      metadata: {
+        title: 'JavaScript Basics Course',
+        courseId: 'js-basics-101',
+        section: 'advanced',
+      },
+    },
+    {
+      contentId: 'analytics-report-001',
+      contentType: 'report',
+      microserviceId: createdMicroservices['analytics'].id,
+      contentText: 'Learning Progress Report: Track your progress across all courses and identify areas for improvement.',
+      chunkIndex: 0,
+      embedding: Array(1536).fill(0).map(() => Math.random() * 2 - 1),
+      metadata: {
+        title: 'Learning Progress Report',
+        reportType: 'progress',
+        userId: 'learner-001',
+      },
+    },
+  ];
+
+  for (const embedding of sampleEmbeddings) {
+    try {
+      const embeddingArray = `[${embedding.embedding.join(',')}]`;
+      await prisma.$executeRawUnsafe(
+        `
+        INSERT INTO vector_embeddings (
+          id,
+          tenant_id,
+          microservice_id,
+          content_id,
+          content_type,
+          embedding,
+          content_text,
+          chunk_index,
+          metadata,
+          created_at,
+          updated_at
+        ) VALUES (
+          gen_random_uuid()::text,
+          $1,
+          $2,
+          $3,
+          $4,
+          $5::vector,
+          $6,
+          $7,
+          $8::jsonb,
+          NOW(),
+          NOW()
+        )
+        `,
+        tenant.id,
+        embedding.microserviceId,
+        embedding.contentId,
+        embedding.contentType,
+        embeddingArray,
+        embedding.contentText,
+        embedding.chunkIndex,
+        JSON.stringify(embedding.metadata)
+      );
+    } catch (error) {
+      // Skip if already exists or other error
+      console.log(`⚠️  Skipped embedding for ${embedding.contentId} (may already exist)`);
+    }
+  }
+
+  console.log(`✅ Created ${sampleEmbeddings.length} sample vector embeddings with microservice tracking`);
+
+  // 8. Create sample queries
   const sampleQuery = await prisma.query.create({
     data: {
       tenantId: tenant.id,
@@ -224,12 +455,25 @@ async function main() {
           {
             sourceId: 'course:js-basics-101',
             sourceType: 'course',
+            sourceMicroservice: 'content', // Track which microservice provided this source
             title: 'JavaScript Basics 101',
             contentSnippet: 'Introduction to JavaScript programming...',
             sourceUrl: '/courses/js-basics-101',
             relevanceScore: 0.92,
             metadata: {
               section: 'getting-started',
+            },
+          },
+          {
+            sourceId: 'assessment-001',
+            sourceType: 'assessment',
+            sourceMicroservice: 'assessment', // From Assessment Service
+            title: 'JavaScript Fundamentals Assessment',
+            contentSnippet: 'Test your knowledge of variables, functions...',
+            sourceUrl: '/assessments/js-fundamentals',
+            relevanceScore: 0.88,
+            metadata: {
+              difficulty: 'beginner',
             },
           },
         ],
@@ -254,17 +498,21 @@ async function main() {
 
   console.log('✅ Created sample query with sources and recommendations');
 
-  // 7. Note about vector embeddings
-  console.log('');
-  console.log('⚠️  Note: Vector embeddings must be created separately');
-  console.log('   Vector embeddings require raw SQL or the vector storage service');
-  console.log('   because Prisma does not support pgvector type directly.');
-  console.log('   Example SQL:');
-  console.log('   INSERT INTO vector_embeddings (...) VALUES (...);');
-
   console.log('');
   console.log('✅ Seeding complete!');
   console.log(`✅ Created tenant: ${tenant.domain} (${tenant.id})`);
+  console.log(`✅ Created ${microservices.length} microservices`);
+  console.log(`✅ Created ${sampleEmbeddings.length} vector embeddings with microservice tracking`);
+  console.log('');
+  console.log('📊 Summary:');
+  console.log(`   - Tenant: ${tenant.domain}`);
+  console.log(`   - Microservices: ${microservices.length}`);
+  console.log(`   - Vector Embeddings: ${sampleEmbeddings.length}`);
+  console.log(`   - User Profiles: ${users.length}`);
+  console.log(`   - Knowledge Graph Nodes: 3`);
+  console.log(`   - Knowledge Graph Edges: 3`);
+  console.log(`   - Access Control Rules: ${rbacRules.length}`);
+  console.log(`   - Sample Queries: 1`);
 }
 
 main()
