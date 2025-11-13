@@ -6,6 +6,10 @@
 import { openai } from '../config/openai.config.js';
 import { logger } from '../utils/logger.util.js';
 import { getRedis, isRedisAvailable } from '../config/redis.config.js';
+import { getPrismaClient } from '../config/database.config.js';
+import { searchSimilarVectors } from './vectorSearch.service.js';
+import { getOrCreateTenant } from './tenant.service.js';
+import { getOrCreateUserProfile, getUserSkillGaps } from './userProfile.service.js';
 
 /**
  * Process a query using RAG (Retrieval-Augmented Generation)
@@ -25,16 +29,54 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
     include_metadata = true,
   } = options;
 
+  let queryRecord = null;
+  let isCached = false;
+
   try {
+    // Get or create tenant (use domain as identifier)
+    const tenantDomain = tenant_id || 'default.local';
+    const tenant = await getOrCreateTenant(tenantDomain);
+    const actualTenantId = tenant.id;
+
+    // Get or create user profile
+    let userProfile = null;
+    if (user_id && user_id !== 'anonymous') {
+      try {
+        userProfile = await getOrCreateUserProfile(actualTenantId, user_id);
+      } catch (profileError) {
+        logger.warn('Failed to get user profile, continuing without personalization', {
+          error: profileError.message,
+        });
+      }
+    }
+
     // Check cache first (if Redis is available)
     if (isRedisAvailable()) {
       try {
         const redis = getRedis();
-        const cacheKey = `query:${tenant_id}:${user_id}:${Buffer.from(query).toString('base64')}`;
+        const cacheKey = `query:${actualTenantId}:${user_id}:${Buffer.from(query).toString('base64')}`;
         const cached = await redis.get(cacheKey);
         if (cached) {
-          logger.info('Query cache hit', { query, tenant_id, user_id });
+          logger.info('Query cache hit', { query, tenant_id: actualTenantId, user_id });
           const cachedResponse = JSON.parse(cached);
+          isCached = true;
+          
+          // Still save query to database for analytics
+          await saveQueryToDatabase({
+            tenantId: actualTenantId,
+            userId: user_id || 'anonymous',
+            sessionId: session_id,
+            queryText: query,
+            answer: cachedResponse.answer,
+            confidenceScore: cachedResponse.confidence,
+            processingTimeMs: cachedResponse.metadata?.processing_time_ms || 0,
+            modelVersion: cachedResponse.metadata?.model_version || 'gpt-3.5-turbo',
+            isPersonalized: false,
+            isCached: true,
+            sources: cachedResponse.sources || [],
+            recommendations: [],
+          });
+
           return {
             ...cachedResponse,
             metadata: {
@@ -57,21 +99,72 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
 
     const queryEmbedding = embeddingResponse.data[0].embedding;
 
-    // TODO: Vector similarity search in PostgreSQL (pgvector)
-    // For now, we'll use OpenAI directly without vector retrieval
-    // This is a simplified implementation
+    // Vector similarity search in PostgreSQL (pgvector)
+    let sources = [];
+    let retrievedContext = '';
+    let confidence = min_confidence;
 
-    // Generate answer using OpenAI
+    try {
+      const similarVectors = await searchSimilarVectors(queryEmbedding, actualTenantId, {
+        limit: max_results,
+        threshold: min_confidence,
+      });
+
+      sources = similarVectors.map((vec) => ({
+        sourceId: vec.contentId,
+        sourceType: vec.contentType,
+        title: vec.metadata?.title || `${vec.contentType}:${vec.contentId}`,
+        contentSnippet: vec.contentText.substring(0, 200),
+        sourceUrl: vec.metadata?.url || `/${vec.contentType}/${vec.contentId}`,
+        relevanceScore: vec.similarity,
+        metadata: vec.metadata,
+      }));
+
+      // Build context from retrieved sources
+      retrievedContext = sources
+        .map((source, idx) => `[Source ${idx + 1}]: ${source.contentSnippet}`)
+        .join('\n\n');
+
+      // Calculate average confidence from vector similarities
+      if (sources.length > 0) {
+        confidence = sources.reduce((sum, s) => sum + s.relevanceScore, 0) / sources.length;
+      }
+    } catch (vectorError) {
+      logger.warn('Vector search failed, continuing without retrieved context', {
+        error: vectorError.message,
+      });
+      // Continue without vector search results
+    }
+
+    // Build personalized context from user profile
+    let personalizationContext = '';
+    if (userProfile) {
+      const skillGaps = await getUserSkillGaps(actualTenantId, user_id);
+      if (skillGaps.length > 0) {
+        personalizationContext = `User skill gaps: ${skillGaps.join(', ')}. `;
+      }
+      if (userProfile.role) {
+        personalizationContext += `User role: ${userProfile.role}. `;
+      }
+    }
+
+    // Generate answer using OpenAI with retrieved context
+    const systemPrompt = `You are a helpful AI assistant for the EDUCORE learning platform. Provide clear, concise, and accurate answers based on the context provided.${personalizationContext ? `\n\n${personalizationContext}` : ''}`;
+    
+    const userPrompt = retrievedContext
+      ? `Context from knowledge base:\n${retrievedContext}\n\nQuestion: ${query}\n\nAnswer based on the context above:`
+      : query;
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful AI assistant for the EDUCORE learning platform. Provide clear, concise, and accurate answers based on the context provided.',
+          content: systemPrompt,
         },
         {
           role: 'user',
-          content: query,
+          content: userPrompt,
         },
       ],
       temperature: 0.7,
@@ -79,28 +172,42 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
     });
 
     const answer = completion.choices[0]?.message?.content || 'I apologize, but I could not generate a response.';
-    const confidence = 0.85; // Default confidence (would be calculated from vector similarity in full implementation)
-
-    // Mock sources (in full implementation, these would come from vector search)
-    const sources = [];
+    const processingTimeMs = Date.now() - startTime;
 
     const response = {
       answer,
       confidence,
       sources,
       metadata: {
-        processing_time_ms: Date.now() - startTime,
+        processing_time_ms: processingTimeMs,
         sources_retrieved: sources.length,
         cached: false,
         model_version: 'gpt-3.5-turbo',
+        personalized: !!userProfile,
       },
     };
+
+    // Save query to database
+    queryRecord = await saveQueryToDatabase({
+      tenantId: actualTenantId,
+      userId: user_id || 'anonymous',
+      sessionId: session_id,
+      queryText: query,
+      answer,
+      confidenceScore: confidence,
+      processingTimeMs,
+      modelVersion: 'gpt-3.5-turbo',
+      isPersonalized: !!userProfile,
+      isCached: false,
+      sources,
+      recommendations: [], // Can be populated later based on user profile
+    });
 
     // Cache the response (TTL: 1 hour) - if Redis is available
     if (isRedisAvailable()) {
       try {
         const redis = getRedis();
-        const cacheKey = `query:${tenant_id}:${user_id}:${Buffer.from(query).toString('base64')}`;
+        const cacheKey = `query:${actualTenantId}:${user_id}:${Buffer.from(query).toString('base64')}`;
         await redis.setex(cacheKey, 3600, JSON.stringify(response));
       } catch (cacheError) {
         // Redis error - continue without caching
@@ -108,11 +215,32 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       }
     }
 
+    // Log audit event
+    try {
+      await logAuditEvent({
+        tenantId: actualTenantId,
+        userId: user_id,
+        action: 'query_processed',
+        resourceType: 'query',
+        resourceId: queryRecord?.id,
+        details: {
+          queryLength: query.length,
+          answerLength: answer.length,
+          sourcesCount: sources.length,
+          confidence,
+        },
+      });
+    } catch (auditError) {
+      logger.warn('Failed to log audit event', { error: auditError.message });
+    }
+
     logger.info('Query processed successfully', {
       query,
-      tenant_id,
+      tenant_id: actualTenantId,
       user_id,
-      processing_time_ms: response.metadata.processing_time_ms,
+      processing_time_ms: processingTimeMs,
+      sources_count: sources.length,
+      confidence,
     });
 
     return response;
@@ -122,10 +250,131 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       query,
       tenant_id,
       user_id,
+      stack: error.stack,
     });
+
+    // Try to log error to audit
+    try {
+      const tenantDomain = tenant_id || 'default.local';
+      const tenant = await getOrCreateTenant(tenantDomain);
+      await logAuditEvent({
+        tenantId: tenant.id,
+        userId: user_id,
+        action: 'query_error',
+        resourceType: 'query',
+        details: {
+          error: error.message,
+          query,
+        },
+      });
+    } catch (auditError) {
+      // Ignore audit errors
+    }
 
     // Return error response
     throw new Error(`Query processing failed: ${error.message}`);
+  }
+}
+
+/**
+ * Save query to database
+ * @private
+ */
+async function saveQueryToDatabase({
+  tenantId,
+  userId,
+  sessionId,
+  queryText,
+  answer,
+  confidenceScore,
+  processingTimeMs,
+  modelVersion,
+  isPersonalized,
+  isCached,
+  sources,
+  recommendations,
+}) {
+  try {
+    const prisma = await getPrismaClient();
+
+    const queryRecord = await prisma.query.create({
+      data: {
+        tenantId,
+        userId: userId || 'anonymous',
+        sessionId,
+        queryText,
+        answer,
+        confidenceScore,
+        processingTimeMs,
+        modelVersion,
+        isPersonalized,
+        isCached,
+        metadata: {
+          sourcesCount: sources.length,
+          recommendationsCount: recommendations.length,
+        },
+        sources: {
+          create: sources.map((source) => ({
+            sourceId: source.sourceId,
+            sourceType: source.sourceType,
+            title: source.title,
+            contentSnippet: source.contentSnippet,
+            sourceUrl: source.sourceUrl,
+            relevanceScore: source.relevanceScore,
+            metadata: source.metadata || {},
+          })),
+        },
+        recommendations: {
+          create: recommendations.map((rec) => ({
+            recommendationType: rec.type,
+            recommendationId: rec.id,
+            title: rec.title,
+            description: rec.description || '',
+            reason: rec.reason || '',
+            priority: rec.priority || 0,
+            metadata: rec.metadata || {},
+          })),
+        },
+      },
+    });
+
+    return queryRecord;
+  } catch (error) {
+    logger.error('Failed to save query to database', {
+      error: error.message,
+      tenantId,
+      userId,
+    });
+    // Don't throw - allow query processing to continue even if DB save fails
+    return null;
+  }
+}
+
+/**
+ * Log audit event
+ * @private
+ */
+async function logAuditEvent({ tenantId, userId, action, resourceType, resourceId, details = {} }) {
+  try {
+    const prisma = await getPrismaClient();
+
+    await prisma.auditLog.create({
+      data: {
+        tenantId,
+        userId,
+        action,
+        resourceType,
+        resourceId,
+        details,
+      },
+    });
+  } catch (error) {
+    logger.warn('Failed to create audit log', {
+      error: error.message,
+      tenantId,
+      action,
+    });
+    // Don't throw - audit logging should not break the main flow
   }
 }
 

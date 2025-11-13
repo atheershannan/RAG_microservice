@@ -61,6 +61,21 @@ async function runMigrations() {
       // If migrations exist, try to deploy them
       try {
         log.info('Found migrations, attempting to deploy...');
+        log.info(`Schema path: ${schemaPath}`);
+        log.info(`Migrations path: ${migrationsPath}`);
+        
+        // First, generate Prisma client to ensure it's up to date
+        log.info('Generating Prisma client...');
+        execSync(`npx prisma generate --schema=${schemaPath}`, {
+          stdio: 'inherit',
+          env: { ...process.env },
+          cwd: projectRoot,
+          shell: true,
+          timeout: 60000, // 1 minute timeout
+        });
+        
+        // Then deploy migrations
+        log.info('Deploying migrations...');
         execSync(`npx prisma migrate deploy --schema=${schemaPath}`, {
           stdio: 'inherit',
           env: { ...process.env },
@@ -72,15 +87,55 @@ async function runMigrations() {
         return;
       } catch (deployError) {
         log.error('Failed to deploy migrations:', deployError.message);
-        log.warn('⚠️  Skipping db push for faster deployment. Run migrations manually.');
-        log.warn('💡 To run migrations: railway run npm run db:migrate:deploy');
-        return; // Don't fallback to db push - skip it
+        log.error('Error details:', deployError);
+        
+        // Try fallback: db push (for development/testing)
+        if (process.env.NODE_ENV !== 'production') {
+          log.warn('⚠️  Attempting fallback: db push (development mode)');
+          try {
+            execSync(`npx prisma db push --schema=${schemaPath} --accept-data-loss`, {
+              stdio: 'inherit',
+              env: { ...process.env },
+              cwd: projectRoot,
+              shell: true,
+              timeout: 120000,
+            });
+            log.info('✅ Database schema pushed successfully (fallback)');
+            return;
+          } catch (pushError) {
+            log.error('Fallback db push also failed:', pushError.message);
+          }
+        }
+        
+        log.warn('⚠️  Continuing without migrations. Database might not be fully synced.');
+        log.warn('💡 To run migrations manually: railway run npm run db:migrate:deploy');
+        return;
       }
     } else {
       log.info('No migrations found.');
-      log.warn('⚠️  Skipping db push for faster deployment. Run migrations manually.');
-      log.warn('💡 To create schema: railway run npx prisma db push --schema=./DATABASE/prisma/schema.prisma');
-      return; // Don't run db push - skip it
+      
+      // In production, we should have migrations
+      if (process.env.NODE_ENV === 'production') {
+        log.warn('⚠️  No migrations found in production!');
+        log.warn('💡 This might indicate a deployment issue.');
+      } else {
+        // In development, try db push as fallback
+        log.info('Attempting db push (development mode)...');
+        try {
+          execSync(`npx prisma db push --schema=${schemaPath} --accept-data-loss`, {
+            stdio: 'inherit',
+            env: { ...process.env },
+            cwd: projectRoot,
+            shell: true,
+            timeout: 120000,
+          });
+          log.info('✅ Database schema pushed successfully');
+          return;
+        } catch (pushError) {
+          log.warn('db push failed:', pushError.message);
+          log.warn('💡 To create schema: railway run npx prisma db push --schema=./DATABASE/prisma/schema.prisma');
+        }
+      }
     }
   } catch (error) {
     log.error('Migration failed:', error.message);

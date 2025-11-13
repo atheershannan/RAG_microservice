@@ -1,0 +1,246 @@
+/**
+ * Vector Search Service
+ * Handles vector similarity search using pgvector
+ */
+
+import { getPrismaClient } from '../config/database.config.js';
+import { logger } from '../utils/logger.util.js';
+
+/**
+ * Search for similar vectors using cosine similarity
+ * @param {number[]} queryEmbedding - Query embedding vector (1536 dimensions)
+ * @param {string} tenantId - Tenant identifier
+ * @param {Object} options - Search options
+ * @param {number} options.limit - Maximum number of results (default: 5)
+ * @param {number} options.threshold - Minimum similarity threshold (default: 0.7)
+ * @param {string} options.contentType - Filter by content type (optional)
+ * @param {string} options.contentId - Filter by content ID (optional)
+ * @returns {Promise<Array>} Array of similar vector embeddings
+ */
+export async function searchSimilarVectors(
+  queryEmbedding,
+  tenantId,
+  options = {}
+) {
+  const { limit = 5, threshold = 0.7, contentType, contentId } = options;
+
+  try {
+    const prisma = await getPrismaClient();
+
+    // Build the query using raw SQL for pgvector similarity search
+    // pgvector uses cosine distance: 1 - cosine_similarity
+    // We want results where similarity > threshold
+    
+    // Convert embedding array to PostgreSQL vector format
+    const embeddingStr = `[${queryEmbedding.join(',')}]`;
+
+    // Build WHERE clause
+    let whereConditions = [`tenant_id = $1`];
+    const params = [tenantId];
+    let paramIndex = 2;
+
+    if (contentType) {
+      whereConditions.push(`content_type = $${paramIndex}`);
+      params.push(contentType);
+      paramIndex++;
+    }
+
+    if (contentId) {
+      whereConditions.push(`content_id = $${paramIndex}`);
+      params.push(contentId);
+      paramIndex++;
+    }
+
+    // Add embedding and threshold to params
+    const embeddingParamIndex = paramIndex;
+    params.push(embeddingStr);
+    paramIndex++;
+    
+    const thresholdParamIndex = paramIndex;
+    params.push(threshold);
+    paramIndex++;
+    
+    const limitParamIndex = paramIndex;
+    params.push(limit);
+
+    // Use cosine distance: 1 - cosine_similarity
+    // Order by distance (ascending) to get most similar first
+    const query = `
+      SELECT 
+        id,
+        tenant_id,
+        content_id,
+        content_type,
+        content_text,
+        chunk_index,
+        metadata,
+        created_at,
+        1 - (embedding <=> $${embeddingParamIndex}::vector) as similarity
+      FROM vector_embeddings
+      WHERE ${whereConditions.join(' AND ')}
+        AND (1 - (embedding <=> $${embeddingParamIndex}::vector)) >= $${thresholdParamIndex}
+      ORDER BY embedding <=> $${embeddingParamIndex}::vector
+      LIMIT $${limitParamIndex}
+    `;
+
+    const results = await prisma.$queryRawUnsafe(query, ...params);
+
+    logger.info('Vector search completed', {
+      tenantId,
+      resultsCount: results.length,
+      threshold,
+      limit,
+    });
+
+    return results.map((row) => ({
+      id: row.id,
+      tenantId: row.tenant_id,
+      contentId: row.content_id,
+      contentType: row.content_type,
+      contentText: row.content_text,
+      chunkIndex: row.chunk_index,
+      metadata: row.metadata || {},
+      similarity: parseFloat(row.similarity),
+      createdAt: row.created_at,
+    }));
+  } catch (error) {
+    logger.error('Vector search error', {
+      error: error.message,
+      tenantId,
+      stack: error.stack,
+    });
+    throw new Error(`Vector search failed: ${error.message}`);
+  }
+}
+
+/**
+ * Store vector embedding in database
+ * @param {Object} embeddingData - Embedding data
+ * @param {string} embeddingData.tenantId - Tenant identifier
+ * @param {string} embeddingData.contentId - Content identifier
+ * @param {string} embeddingData.contentType - Content type
+ * @param {number[]} embeddingData.embedding - Embedding vector (1536 dimensions)
+ * @param {string} embeddingData.contentText - Original content text
+ * @param {number} embeddingData.chunkIndex - Chunk index (default: 0)
+ * @param {Object} embeddingData.metadata - Additional metadata
+ * @returns {Promise<Object>} Created embedding record
+ */
+export async function storeVectorEmbedding(embeddingData) {
+  const {
+    tenantId,
+    contentId,
+    contentType,
+    embedding,
+    contentText,
+    chunkIndex = 0,
+    metadata = {},
+  } = embeddingData;
+
+  try {
+    const prisma = await getPrismaClient();
+
+    // Use raw SQL to insert vector embedding
+    // Prisma doesn't support vector type directly, so we use raw SQL
+    const embeddingArray = `[${embedding.join(',')}]`;
+
+    const query = `
+      INSERT INTO vector_embeddings (
+        id,
+        tenant_id,
+        content_id,
+        content_type,
+        embedding,
+        content_text,
+        chunk_index,
+        metadata,
+        created_at,
+        updated_at
+      ) VALUES (
+        gen_random_uuid()::text,
+        $1,
+        $2,
+        $3,
+        $4::vector,
+        $5,
+        $6,
+        $7::jsonb,
+        NOW(),
+        NOW()
+      )
+      RETURNING *
+    `;
+
+    const result = await prisma.$queryRawUnsafe(
+      query,
+      tenantId,
+      contentId,
+      contentType,
+      embeddingArray,
+      contentText,
+      chunkIndex,
+      JSON.stringify(metadata)
+    );
+
+    logger.info('Vector embedding stored', {
+      tenantId,
+      contentId,
+      contentType,
+      chunkIndex,
+    });
+
+    return {
+      id: result[0].id,
+      tenantId: result[0].tenant_id,
+      contentId: result[0].content_id,
+      contentType: result[0].content_type,
+      chunkIndex: result[0].chunk_index,
+      metadata: result[0].metadata || {},
+      createdAt: result[0].created_at,
+    };
+  } catch (error) {
+    logger.error('Store vector embedding error', {
+      error: error.message,
+      tenantId,
+      contentId,
+      stack: error.stack,
+    });
+    throw new Error(`Store vector embedding failed: ${error.message}`);
+  }
+}
+
+/**
+ * Delete vector embeddings by content ID
+ * @param {string} tenantId - Tenant identifier
+ * @param {string} contentId - Content identifier
+ * @returns {Promise<number>} Number of deleted embeddings
+ */
+export async function deleteVectorEmbeddings(tenantId, contentId) {
+  try {
+    const prisma = await getPrismaClient();
+
+    const result = await prisma.$executeRawUnsafe(
+      `
+      DELETE FROM vector_embeddings
+      WHERE tenant_id = $1 AND content_id = $2
+    `,
+      tenantId,
+      contentId
+    );
+
+    logger.info('Vector embeddings deleted', {
+      tenantId,
+      contentId,
+      deletedCount: result,
+    });
+
+    return result;
+  } catch (error) {
+    logger.error('Delete vector embeddings error', {
+      error: error.message,
+      tenantId,
+      contentId,
+      stack: error.stack,
+    });
+    throw new Error(`Delete vector embeddings failed: ${error.message}`);
+  }
+}
