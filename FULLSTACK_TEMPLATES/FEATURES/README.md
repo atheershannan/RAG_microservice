@@ -27,6 +27,8 @@ Recent additions (backend + frontend)
 - General Mode UX Cleanup
   - Removed "Contact Support" quick-action from initial recommendations
   - Kept minimal buttons only (e.g., "Get Started Guide", "Live Chat")
+- Get Started Guide Behavior
+  - Clicking “Get Started Guide” now returns an in-chat EDUCORE quickstart message (no external navigation required)
 - RAG and Fallback
   - RAG-only answers with strict context
   - gRPC fallback hook (disabled unless configured) for EDUCORE services

@@ -262,7 +262,25 @@ const FloatingChatWidget = ({
   };
 
   const handleSelectRecommendation = (item) => {
-    // Send recommendation as user message
+    // Special handling for "Get Started Guide" → return EDUCORE guide immediately
+    if (item?.id === 'rec-1' || item?.label?.toLowerCase() === 'get started guide') {
+      const guideMessage = {
+        id: `bot-guide-${Date.now()}`,
+        isBot: true,
+        text:
+          'EDUCORE - Getting Started:\n' +
+          '1) Ask domain questions tied to your tenant data.\n' +
+          '2) For Support Mode (Assessment/DevLab), embed the bot with explicit mode or set VITE_DEFAULT_SUPPORT_MODE.\n' +
+          '3) Ensure your DB is seeded and pgvector is enabled.\n' +
+          'Helpful links: /api/v1/query (chat), /api/assessment/support (proxy), README → Features & Logging.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      // Push bot guide and keep recommendations visible
+      dispatch(addMessage(guideMessage));
+      return;
+    }
+
+    // Default: send the recommendation label as a user message
     handleSendMessage(item.label);
   };
 
