@@ -4,6 +4,7 @@
  */
 
 import { processQuery } from '../services/queryProcessing.service.js';
+import { assessmentSupport, devlabSupport } from './microserviceSupport.controller.js';
 import { validate, schemas } from '../utils/validation.util.js';
 import { logger } from '../utils/logger.util.js';
 import Joi from 'joi';
@@ -32,6 +33,28 @@ const queryRequestSchema = Joi.object({
  */
 export async function submitQuery(req, res, next) {
   try {
+    // Header/metadata based support-mode routing (no keyword detection)
+    const headerSource = (req.headers['x-source'] || req.headers['x-microservice-source'] || '').toString().toLowerCase();
+    const metaSource = (req.body?.metadata?.source || '').toString().toLowerCase();
+    const supportModeFlag = (req.body?.support_mode || '').toString().toLowerCase();
+
+    if (headerSource === 'assessment' || metaSource === 'assessment' || supportModeFlag === 'assessment') {
+      logger.info('Routing to Assessment Support (header/metadata/flag matched)', {
+        headerSource,
+        metaSource,
+        supportModeFlag,
+      });
+      return assessmentSupport(req, res, next);
+    }
+    if (headerSource === 'devlab' || metaSource === 'devlab' || supportModeFlag === 'devlab') {
+      logger.info('Routing to DevLab Support (header/metadata/flag matched)', {
+        headerSource,
+        metaSource,
+        supportModeFlag,
+      });
+      return devlabSupport(req, res, next);
+    }
+
     // Validate request body
     const validation = validate(req.body, queryRequestSchema);
     if (!validation.valid) {
@@ -48,6 +71,11 @@ export async function submitQuery(req, res, next) {
     const session_id = context.session_id || req.session?.id;
 
     // Process the query
+    logger.info('Routing to normal chatbot flow (no support-mode signal found)', {
+      headerSource,
+      metaSource,
+      supportModeFlag,
+    });
     const result = await processQuery({
       query,
       tenant_id,

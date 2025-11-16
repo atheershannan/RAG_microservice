@@ -10,6 +10,10 @@ Backend implementation for the EDUCORE Contextual Assistant microservice.
   - Context-only OpenAI answers for EDUCORE queries
   - gRPC fallback to EDUCORE microservices when RAG has no hits
   - Dynamic, contextual “no EDUCORE data” messages if both RAG and gRPC have no data
+- Support-mode routing:
+  - Activates ONLY when explicitly requested by microservice (headers/metadata/flag)
+  - `X-Source: assessment|devlab` or `metadata.source` or `support_mode`
+  - Normal chat flow never switches to support mode based on keywords
 - Caching (optional Redis) for query responses
 - Audit logs and persisted query history with sources and recommendations
 - Configurable CORS and environment-based configuration
@@ -18,11 +22,15 @@ Backend implementation for the EDUCORE Contextual Assistant microservice.
 
 - Logging uses Winston (`src/utils/logger.util.js`).
 - Control level with `LOG_LEVEL` env var (default: `info`). Common values: `error`, `warn`, `info`, `debug`.
+- Pretty console logs in dev with `LOG_PRETTY=true`.
 - Key log points in the RAG flow (`src/services/queryProcessing.service.js`):
   - Query classification decision (EDUCORE vs general)
   - RAG vector search summary (count and average confidence)
   - gRPC fallback attempts and results
   - Final “no data” outcome after RAG and gRPC
+- Chat routing logs (`src/controllers/query.controller.js`):
+  - Forward to Assessment/DevLab support when header/metadata/flag matches
+  - Normal chatbot routing when no support-mode signal
 
 ## Structure
 
