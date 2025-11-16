@@ -20,5 +20,7 @@ Format: `ID | Name | Owner | Status | Dependencies | Stage`
 - F-0015 | Access Control Audit & Compliance | Project Team | Planned | F-0010, F-0011, F-0012 | Stage_04
 - F-0016 | Frontend Chatbot UI Widget | Project Team | Done | None | Stage_05
 - F-0017 | Chatbot Proxy Assistant Behavior | Project Team | Done | F-0016 | Stage_05
+- F-0018 | Support-Mode Explicit Gating (Embed/Headers only) | Backend/Frontend | Done | F-0016, F-0017 | Stage_08
+- F-0019 | Remove Keyword-Based Support Auto-Switch | Frontend | Done | F-0016 | Stage_05
 
 
