@@ -54,38 +54,18 @@ const EXIT_KEYWORDS = [
 export const detectModeChange = (message, currentMode) => {
   const lowerMessage = message.toLowerCase();
 
-  // Check for exit keywords first
+  // Only allow explicit exit from support mode based on keywords.
+  // DO NOT auto-enter support modes based on message content.
   if (currentMode !== MODES.GENERAL) {
-    const shouldExit = EXIT_KEYWORDS.some((keyword) =>
-      lowerMessage.includes(keyword)
-    );
+    const shouldExit = EXIT_KEYWORDS.some((keyword) => lowerMessage.includes(keyword));
     if (shouldExit) {
       return MODES.GENERAL;
     }
+    return null; // remain in current support mode
   }
 
-  // If already in support mode, stay in support mode (unless exit)
-  if (currentMode !== MODES.GENERAL) {
-    return null; // Stay in current support mode
-  }
-
-  // Check for Assessment Support keywords
-  const hasAssessmentKeyword = ASSESSMENT_KEYWORDS.some((keyword) =>
-    lowerMessage.includes(keyword)
-  );
-  if (hasAssessmentKeyword) {
-    return MODES.ASSESSMENT_SUPPORT;
-  }
-
-  // Check for DevLab Support keywords
-  const hasDevLabKeyword = DEVLAB_KEYWORDS.some((keyword) =>
-    lowerMessage.includes(keyword)
-  );
-  if (hasDevLabKeyword) {
-    return MODES.DEVLAB_SUPPORT;
-  }
-
-  return null; // No mode change
+  // In GENERAL mode, never switch to support mode by keywords.
+  return null;
 };
 
 /**
