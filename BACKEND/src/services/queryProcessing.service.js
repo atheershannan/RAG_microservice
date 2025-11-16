@@ -11,6 +11,10 @@ import { searchSimilarVectors } from './vectorSearch.service.js';
 import { getOrCreateTenant } from './tenant.service.js';
 import { getOrCreateUserProfile, getUserSkillGaps } from './userProfile.service.js';
 
+// If true (default), the service MUST retrieve DB context before answering.
+// Set REQUIRE_DB_CONTEXT=false to allow answering even without DB sources.
+const requireDbContext = process.env.REQUIRE_DB_CONTEXT !== 'false';
+
 /**
  * Process a query using RAG (Retrieval-Augmented Generation)
  * @param {Object} params - Query parameters
@@ -135,6 +139,61 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         error: vectorError.message,
       });
       // Continue without vector search results
+    }
+
+    // Enforce DB-backed answers if configured (default)
+    if (requireDbContext && sources.length === 0) {
+      const processingTimeMs = Date.now() - startTime;
+      const answer =
+        'לא נמצאה התאמה בידע עבור הטננט הזה. יש להזרים/לזרוע תוכן למסד הנתונים ולנסות שוב.';
+
+      const response = {
+        answer,
+        confidence: 0,
+        sources: [],
+        metadata: {
+          processing_time_ms: processingTimeMs,
+          sources_retrieved: 0,
+          cached: false,
+          model_version: 'db-required',
+          personalized: false,
+        },
+      };
+
+      // Persist minimal query record for analytics/observability
+      try {
+        await saveQueryToDatabase({
+          tenantId: actualTenantId,
+          userId: user_id || 'anonymous',
+          sessionId: session_id,
+          queryText: query,
+          answer,
+          confidenceScore: 0,
+          processingTimeMs,
+          modelVersion: 'db-required',
+          isPersonalized: false,
+          isCached: false,
+          sources: [],
+          recommendations: [],
+        });
+      } catch (_) {
+        // ignore persistence errors
+      }
+
+      try {
+        await logAuditEvent({
+          tenantId: actualTenantId,
+          userId: user_id,
+          action: 'query_no_db_context',
+          resourceType: 'query',
+          resourceId: queryRecord?.id,
+          details: { queryLength: query.length },
+        });
+      } catch (_) {
+        // ignore audit errors
+      }
+
+      return response;
     }
 
     // Build personalized context from user profile

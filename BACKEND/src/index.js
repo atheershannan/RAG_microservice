@@ -10,6 +10,7 @@ import { logger } from './utils/logger.util.js';
 import queryRoutes from './routes/query.routes.js';
 import microserviceSupportRoutes from './routes/microserviceSupport.routes.js';
 import recommendationsRoutes from './routes/recommendations.routes.js';
+import knowledgeGraphRoutes from './routes/knowledgeGraph.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -64,6 +65,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/v1', queryRoutes);
 app.use('/api/v1', recommendationsRoutes);
+app.use('/api/v1', knowledgeGraphRoutes);
 app.use('/api', microserviceSupportRoutes);
 
 // Error handling
@@ -78,6 +80,7 @@ app.listen(PORT, () => {
   logger.info(`Assessment support: http://localhost:${PORT}/api/assessment/support`);
   logger.info(`DevLab support: http://localhost:${PORT}/api/devlab/support`);
   logger.info(`Recommendations: http://localhost:${PORT}/api/v1/personalized/recommendations/:userId`);
+  logger.info(`Skill progress: http://localhost:${PORT}/api/v1/knowledge/progress/user/:userId/skill/:skillId?tenant_id=dev.educore.local`);
   logger.info(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
 });
 
