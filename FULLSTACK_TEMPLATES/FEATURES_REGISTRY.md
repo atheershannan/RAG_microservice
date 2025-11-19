@@ -25,5 +25,6 @@ Format: `ID | Name | Owner | Status | Dependencies | Stage`
 - F-0020 | Backend Recommendations API Integration | Backend/Frontend | Done | F-0009, F-0016 | Stage_08
 - F-0021 | AI LEARNER Learning Recommendations Integration | Backend | Done | F-0020 | Stage_08
 - F-0022 | gRPC Communication for Microservices | Backend | Done | F-0021 | Stage_08
+- F-0023 | Coordinator gRPC Integration for Real-Time RAG Communication | Backend | Done | F-0022 | Stage_08
 
 

@@ -24,7 +24,10 @@
     "db:generate": "prisma generate --schema=../DATABASE/prisma/schema.prisma",
     "db:seed": "node ../DATABASE/prisma/seed.js",
     "db:studio": "prisma studio --schema=../DATABASE/prisma/schema.prisma",
-    "proto:generate": "node scripts/generate-proto.js"
+    "proto:generate": "node scripts/generate-proto.js",
+    "check:data": "node scripts/check-supabase-data.js",
+    "check:data:search": "node scripts/check-supabase-data.js",
+    "create:embeddings": "node scripts/create-embeddings-and-insert.js"
   },
   "keywords": [
     "rag",
