@@ -236,84 +236,111 @@ async function insertVectorEmbedding(tenantId, data, embedding, microserviceId =
     const prisma = await getPrismaClient();
     
     // Convert embedding array to PostgreSQL vector format
+    // Format: [1.0, 2.0, 3.0] as string
     const embeddingArray = `[${embedding.join(',')}]`;
+
+    // Check if record already exists
+    const existing = await prisma.$queryRawUnsafe(
+      `SELECT id FROM vector_embeddings 
+       WHERE tenant_id = $1 AND content_id = $2 AND chunk_index = $3`,
+      tenantId,
+      data.contentId,
+      data.chunkIndex
+    );
 
     // Build query with or without microservice_id
     const hasMicroservice = microserviceId !== null;
-    const query = hasMicroservice ? `
-      INSERT INTO vector_embeddings (
-        id,
-        tenant_id,
-        microservice_id,
-        content_id,
-        content_type,
-        embedding,
-        content_text,
-        chunk_index,
-        metadata,
-        created_at,
-        updated_at
-      ) VALUES (
-        gen_random_uuid()::text,
-        $1,
-        $2,
-        $3,
-        $4,
-        $5::vector,
-        $6,
-        $7,
-        $8::jsonb,
-        NOW(),
-        NOW()
-      )
-      ON CONFLICT (tenant_id, content_id, chunk_index) 
-      DO UPDATE SET
-        content_text = EXCLUDED.content_text,
-        embedding = EXCLUDED.embedding,
-        metadata = EXCLUDED.metadata,
-        microservice_id = EXCLUDED.microservice_id,
-        updated_at = NOW()
-      RETURNING id, content_id, content_type
-    ` : `
-      INSERT INTO vector_embeddings (
-        id,
-        tenant_id,
-        content_id,
-        content_type,
-        embedding,
-        content_text,
-        chunk_index,
-        metadata,
-        created_at,
-        updated_at
-      ) VALUES (
-        gen_random_uuid()::text,
-        $1,
-        $2,
-        $3,
-        $4::vector,
-        $5,
-        $6,
-        $7::jsonb,
-        NOW(),
-        NOW()
-      )
-      ON CONFLICT (tenant_id, content_id, chunk_index) 
-      DO UPDATE SET
-        content_text = EXCLUDED.content_text,
-        embedding = EXCLUDED.embedding,
-        metadata = EXCLUDED.metadata,
-        updated_at = NOW()
-      RETURNING id, content_id, content_type
-    `;
+    
+    if (existing && existing.length > 0) {
+      // Update existing record
+      const updateQuery = hasMicroservice ? `
+        UPDATE vector_embeddings SET
+          content_text = $4,
+          embedding = $5::vector,
+          metadata = $6::jsonb,
+          microservice_id = $7,
+          updated_at = NOW()
+        WHERE tenant_id = $1 AND content_id = $2 AND chunk_index = $3
+        RETURNING id, content_id, content_type
+      ` : `
+        UPDATE vector_embeddings SET
+          content_text = $4,
+          embedding = $5::vector,
+          metadata = $6::jsonb,
+          updated_at = NOW()
+        WHERE tenant_id = $1 AND content_id = $2 AND chunk_index = $3
+        RETURNING id, content_id, content_type
+      `;
 
-    const params = hasMicroservice
-      ? [tenantId, microserviceId, data.contentId, data.contentType, embeddingArray, data.contentText, data.chunkIndex, JSON.stringify(data.metadata)]
-      : [tenantId, data.contentId, data.contentType, embeddingArray, data.contentText, data.chunkIndex, JSON.stringify(data.metadata)];
+      const updateParams = hasMicroservice
+        ? [tenantId, data.contentId, data.chunkIndex, data.contentText, embeddingArray, JSON.stringify(data.metadata), microserviceId]
+        : [tenantId, data.contentId, data.chunkIndex, data.contentText, embeddingArray, JSON.stringify(data.metadata)];
 
-    const result = await prisma.$queryRawUnsafe(query, ...params);
+      const result = await prisma.$queryRawUnsafe(updateQuery, ...updateParams);
+      return result[0];
+    } else {
+      // Insert new record
+      const insertQuery = hasMicroservice ? `
+        INSERT INTO vector_embeddings (
+          id,
+          tenant_id,
+          microservice_id,
+          content_id,
+          content_type,
+          embedding,
+          content_text,
+          chunk_index,
+          metadata,
+          created_at,
+          updated_at
+        ) VALUES (
+          gen_random_uuid()::text,
+          $1,
+          $2,
+          $3,
+          $4,
+          $5::vector,
+          $6,
+          $7,
+          $8::jsonb,
+          NOW(),
+          NOW()
+        )
+        RETURNING id, content_id, content_type
+      ` : `
+        INSERT INTO vector_embeddings (
+          id,
+          tenant_id,
+          content_id,
+          content_type,
+          embedding,
+          content_text,
+          chunk_index,
+          metadata,
+          created_at,
+          updated_at
+        ) VALUES (
+          gen_random_uuid()::text,
+          $1,
+          $2,
+          $3,
+          $4::vector,
+          $5,
+          $6,
+          $7::jsonb,
+          NOW(),
+          NOW()
+        )
+        RETURNING id, content_id, content_type
+      `;
 
-    return result[0];
+      const insertParams = hasMicroservice
+        ? [tenantId, microserviceId, data.contentId, data.contentType, embeddingArray, data.contentText, data.chunkIndex, JSON.stringify(data.metadata)]
+        : [tenantId, data.contentId, data.contentType, embeddingArray, data.contentText, data.chunkIndex, JSON.stringify(data.metadata)];
+
+      const result = await prisma.$queryRawUnsafe(insertQuery, ...insertParams);
+      return result[0];
+    }
   } catch (error) {
     logger.error('Failed to insert vector embedding', {
       error: error.message,
@@ -412,16 +439,18 @@ async function main() {
     console.log('='.repeat(60) + '\n');
 
     // Verify "Eden Levi" was inserted
-    const edenCheck = await prisma.$queryRaw`
-      SELECT 
+    const edenCheck = await prisma.$queryRawUnsafe(
+      `SELECT 
         content_id,
         content_text,
         metadata->>'fullName' as name,
         metadata->>'role' as role,
-        array_length(embedding::float[], 1) as embedding_dimensions
+        (SELECT array_length(string_to_array(embedding::text, ','), 1)) as embedding_dimensions
       FROM vector_embeddings
-      WHERE content_id = 'user:manager-001' AND tenant_id = ${tenant.id}
-    `;
+      WHERE content_id = $1 AND tenant_id = $2`,
+      'user:manager-001',
+      tenant.id
+    );
 
     if (edenCheck.length > 0) {
       console.log('✅ "Eden Levi" verified:');
