@@ -34,9 +34,33 @@ https://ragmicroservice-production.up.railway.app/api/debug/embeddings-status?te
    ```
 
 ### שלב 3: Headers (אופציונלי)
-בדרך כלל לא צריך headers מיוחדים, אבל אם יש CORS issues:
+
+#### Headers בסיסיים:
 - **Key**: `Content-Type`
 - **Value**: `application/json`
+
+#### Header לבדיקת RBAC (Admin User):
+כדי לבדוק התנהגות של admin user, הוסף header:
+- **Key**: `x-user-role`
+- **Value**: `admin`
+
+**איך להוסיף ב-Postman:**
+1. לחץ על הטאב **"Headers"** (ליד Params)
+2. לחץ על **"Add Header"** או **"+"**
+3. הכנס:
+   - **Key**: `x-user-role`
+   - **Value**: `admin`
+4. לחץ **Save**
+
+**דוגמה:**
+```
+x-user-role: admin
+```
+
+**תפקידים אפשריים:**
+- `admin` - גישה מלאה לכל user profiles
+- `user` - גישה מוגבלת (רק queries עם שמות ספציפיים)
+- `anonymous` - ברירת מחדל (אין גישה ל-user profiles)
 
 ### שלב 4: שלח את ה-Request
 לחץ על **"Send"**

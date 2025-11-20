@@ -320,6 +320,16 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       // - Admins: Can access all user profiles
       // - Non-admins: Can ONLY access user profiles when querying about SPECIFIC users by name
       // - This maintains privacy while allowing specific user lookups
+      
+      // 🔍 BEFORE RBAC Filtering - Detailed logging
+      console.log('🔍 BEFORE RBAC Filtering:', {
+        query: query.substring(0, 100),
+        totalResults: similarVectors.length,
+        userProfileCount: similarVectors.filter(r => r.contentType === 'user_profile').length,
+        resultTypes: [...new Set(similarVectors.map(r => r.contentType))],
+        contentIds: similarVectors.map(r => r.contentId).slice(0, 5),
+      });
+      
       const queryLower = query.toLowerCase();
       const translatedLower = translatedQuery?.toLowerCase() || '';
       const queryForCheck = queryForEmbedding.toLowerCase();
@@ -332,6 +342,13 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       
       // Check if query contains any specific user name
       const hasSpecificUserName = specificUserNamePatterns.some(name => 
+        queryLower.includes(name) || 
+        translatedLower.includes(name) ||
+        queryForCheck.includes(name)
+      );
+      
+      // Find which name matched
+      const matchedName = specificUserNamePatterns.find(name => 
         queryLower.includes(name) || 
         translatedLower.includes(name) ||
         queryForCheck.includes(name)
@@ -354,8 +371,26 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         queryForCheck.includes("who's")
       );
       
-      const userRole = userProfile?.role || 'anonymous';
-      const isAdmin = userRole === 'admin';
+      // 🔑 Check user role source
+      const userRoleFromProfile = userProfile?.role;
+      const userRoleFromContext = context?.role;
+      const userRole = userProfile?.role || context?.role || 'anonymous';
+      const isAdmin = userRole === 'admin' || userRole === 'administrator';
+      
+      console.log('👤 User Context:', {
+        user_id: user_id,
+        userRoleFromProfile: userRoleFromProfile,
+        userRoleFromContext: userRoleFromContext,
+        finalRole: userRole,
+        isAdmin: isAdmin,
+        query: query.substring(0, 100),
+        queryLower: queryLower.substring(0, 100),
+        translatedLower: translatedLower.substring(0, 100),
+        queryForCheck: queryForCheck.substring(0, 100),
+        hasSpecificUserName: hasSpecificUserName,
+        matchedName: matchedName,
+        hasUserQueryPattern: hasUserQueryPattern,
+      });
       
       // RBAC: Allow user_profile if:
       // 1. User is admin (full access), OR
@@ -363,6 +398,14 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       // Simplified logic: if query mentions a specific user name, allow user_profile results
       // This is more permissive but still maintains privacy (no general "show all users" queries)
       const allowUserProfiles = isAdmin || hasSpecificUserName;
+      
+      if (isAdmin) {
+        console.log('✅ Admin user - allowing all user_profile results');
+      } else if (hasSpecificUserName) {
+        console.log(`✅ Query mentions specific user (${matchedName}) - allowing user_profile results`);
+      } else {
+        console.log('❌ Non-admin, no specific user mentioned - blocking user_profile results');
+      }
       
       const userProfilesFound = similarVectors.filter(v => v.contentType === 'user_profile');
       const filteredVectors = allowUserProfiles
@@ -372,9 +415,29 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       // Track vectors after RBAC filtering
       vectorsAfterRBAC = filteredVectors.length;
       
+      // 🔍 AFTER RBAC Filtering - Detailed logging
+      console.log('🔍 AFTER RBAC Filtering:', {
+        originalCount: similarVectors.length,
+        filteredCount: filteredVectors.length,
+        removedCount: similarVectors.length - filteredVectors.length,
+        allowUserProfiles: allowUserProfiles,
+        userProfilesFound: userProfilesFound.length,
+        userProfilesRemoved: allowUserProfiles ? 0 : userProfilesFound.length,
+      });
+      
       // Update filtering reason if RBAC filtered out all results
       if (similarVectors.length > 0 && filteredVectors.length === 0 && !allowUserProfiles) {
         filteringReason = 'RBAC_FILTERED';
+        console.error('⚠️ WARNING: RBAC filtered out ALL results!', {
+          hadResults: similarVectors.length,
+          hadUserProfiles: userProfilesFound.length,
+          allowUserProfiles: allowUserProfiles,
+          userRole: userRole,
+          isAdmin: isAdmin,
+          hasSpecificUserName: hasSpecificUserName,
+          matchedName: matchedName,
+          query: query.substring(0, 100),
+        });
       } else if (similarVectors.length > 0 && filteredVectors.length === 0 && allowUserProfiles) {
         // If admin but still no results, it's not RBAC - keep original reason
         // (could be BELOW_THRESHOLD or NO_VECTOR_RESULTS)
@@ -386,6 +449,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         user_role: userRole,
         is_admin: isAdmin,
         has_specific_user_name: hasSpecificUserName,
+        matched_name: matchedName,
         has_user_query_pattern: hasUserQueryPattern,
         allow_user_profiles: allowUserProfiles,
         total_vectors: similarVectors.length,
@@ -486,10 +550,26 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
               queryForCheck.includes(name)
             );
             
-            const userRole = userProfile?.role || 'anonymous';
-            const isAdmin = userRole === 'admin';
+            const matchedName = specificUserNamePatterns.find(name => 
+              queryLower.includes(name) || 
+              translatedLower.includes(name) ||
+              queryForCheck.includes(name)
+            );
+            
+            const userRole = userProfile?.role || context?.role || 'anonymous';
+            const isAdmin = userRole === 'admin' || userRole === 'administrator';
             // Simplified: Allow if admin OR query contains specific user name
             const allowUserProfiles = isAdmin || hasSpecificUserName;
+            
+            console.log('🔍 Low Threshold RBAC Decision:', {
+              hasSpecificUserName: hasSpecificUserName,
+              matchedName: matchedName,
+              userRole: userRole,
+              isAdmin: isAdmin,
+              allowUserProfiles: allowUserProfiles,
+              lowThresholdVectorsCount: lowThresholdVectors.length,
+              userProfilesInResults: lowThresholdVectors.filter(v => v.contentType === 'user_profile').length,
+            });
             
             const filteredLowThreshold = allowUserProfiles
               ? lowThresholdVectors
@@ -501,6 +581,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
               user_role: userRole,
               is_admin: isAdmin,
               has_specific_user_name: hasSpecificUserName,
+              matched_name: matchedName,
               allow_user_profiles: allowUserProfiles,
               total_low_threshold: lowThresholdVectors.length,
               user_profiles_in_results: lowThresholdVectors.filter(v => v.contentType === 'user_profile').length,

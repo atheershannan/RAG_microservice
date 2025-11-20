@@ -101,6 +101,9 @@ export async function submitQuery(req, res, next) {
     // Extract user_id from token if not provided
     const user_id = context.user_id || req.user?.id || 'anonymous';
     const session_id = context.session_id || req.session?.id;
+    
+    // Extract user role from headers or context
+    const user_role = context.role || req.headers['x-user-role'] || req.user?.role || null;
 
     // Process the query
     logger.info('Routing to normal chatbot flow (no support-mode signal found)', {
@@ -115,6 +118,7 @@ export async function submitQuery(req, res, next) {
         ...context,
         user_id,
         session_id,
+        role: user_role, // Pass role through context
       },
       options,
     });
