@@ -38,14 +38,19 @@ export async function getEmbeddingsStatus(req, res, next) {
     ).catch(() => []);
 
     // Get total count of embeddings
+    // Note: PostgreSQL COUNT(*) can return BigInt, so we explicitly cast and convert
     const totalCount = await prisma.$queryRaw(
       Prisma.sql`SELECT COUNT(*)::int as count FROM vector_embeddings`
     ).catch(() => [{ count: 0 }]);
+    const totalCountValue = totalCount[0]?.count;
+    const safeTotalCount = typeof totalCountValue === 'bigint' ? Number(totalCountValue) : Number(totalCountValue || 0);
 
     // Get count by tenant
     const tenantCount = await prisma.$queryRaw(
       Prisma.sql`SELECT COUNT(*)::int as count FROM vector_embeddings WHERE tenant_id = ${tenantId}`
     ).catch(() => [{ count: 0 }]);
+    const tenantCountValue = tenantCount[0]?.count;
+    const safeTenantCount = typeof tenantCountValue === 'bigint' ? Number(tenantCountValue) : Number(tenantCountValue || 0);
 
     // Get count by content type
     const contentTypeCount = await prisma.$queryRaw(
@@ -104,25 +109,56 @@ export async function getEmbeddingsStatus(req, res, next) {
     ).catch(() => []);
 
     // Helper function to safely serialize data for JSON
-    const safeSerialize = (data) => {
+    // Handles BigInt, circular references, undefined values, and Prisma objects
+    const safeSerialize = (data, seen = new WeakSet()) => {
+      // Handle null/undefined
       if (data === null || data === undefined) return null;
-      if (typeof data === 'string') {
-        return data.replace(/\n/g, ' ').replace(/\r/g, ' ').replace(/\t/g, ' ').trim();
+      
+      // Handle BigInt - convert to string or number
+      if (typeof data === 'bigint') {
+        return Number(data);
       }
+      
+      // Handle circular references
       if (typeof data === 'object') {
-        if (Array.isArray(data)) {
-          return data.map(safeSerialize);
+        if (seen.has(data)) {
+          return '[Circular Reference]';
         }
+        seen.add(data);
+        
+        // Handle arrays
+        if (Array.isArray(data)) {
+          return data.map(item => safeSerialize(item, seen));
+        }
+        
+        // Handle Date objects
+        if (data instanceof Date) {
+          return data.toISOString();
+        }
+        
+        // Handle plain objects
         const cleaned = {};
         for (const [key, value] of Object.entries(data)) {
           try {
-            cleaned[key] = safeSerialize(value);
+            // Skip undefined values
+            if (value === undefined) {
+              continue;
+            }
+            cleaned[key] = safeSerialize(value, seen);
           } catch (e) {
+            // If serialization fails, convert to string
             cleaned[key] = String(value);
           }
         }
         return cleaned;
       }
+      
+      // Handle strings - clean up whitespace
+      if (typeof data === 'string') {
+        return data.replace(/\n/g, ' ').replace(/\r/g, ' ').replace(/\t/g, ' ').trim();
+      }
+      
+      // Handle other primitives
       return data;
     };
 
@@ -142,8 +178,8 @@ export async function getEmbeddingsStatus(req, res, next) {
         indexes: safeSerialize(indexCheck),
       },
       embeddings: {
-        total_in_database: Number(totalCount[0]?.count || 0),
-        total_for_tenant: Number(tenantCount[0]?.count || 0),
+        total_in_database: safeTotalCount,
+        total_for_tenant: safeTenantCount,
         by_content_type: safeSerialize(contentTypeCount),
         sample_embeddings: safeSerialize(sampleEmbeddings),
       },
@@ -156,33 +192,122 @@ export async function getEmbeddingsStatus(req, res, next) {
       },
       recommendations: {
         check_tenant_id: String('Make sure queries use the correct tenant_id. Current tenant: ' + tenantId),
-        check_embeddings: String(tenantCount[0]?.count === 0 
+        check_embeddings: String(safeTenantCount === 0 
           ? 'No embeddings found for this tenant. Run the embeddings script.' 
-          : `${tenantCount[0]?.count} embeddings found for this tenant.`),
+          : `${safeTenantCount} embeddings found for this tenant.`),
         check_threshold: String('Current default threshold is 0.25. Lower thresholds may return more results.'),
       },
     };
 
     logger.info('Embeddings status checked', {
       tenantId,
-      totalEmbeddings: totalCount[0]?.count || 0,
-      tenantEmbeddings: tenantCount[0]?.count || 0,
+      totalEmbeddings: safeTotalCount,
+      tenantEmbeddings: safeTenantCount,
     });
+
+    // DEBUG: Test JSON serialization of each field individually
+    console.log('🔍 Testing JSON serialization of each field:');
+    const fieldErrors = [];
+    
+    for (const [key, value] of Object.entries(response)) {
+      try {
+        JSON.stringify(value);
+        console.log(`  ✅ ${key}: OK`);
+      } catch (err) {
+        console.log(`  ❌ ${key}: FAILED - ${err.message}`);
+        console.log(`  Value type: ${typeof value}`);
+        console.log(`  Value preview:`, value instanceof Object ? Object.keys(value).slice(0, 5) : String(value).substring(0, 100));
+        fieldErrors.push({ field: key, error: err.message, valueType: typeof value });
+      }
+    }
+
+    // Test nested fields if top-level passes
+    if (fieldErrors.length === 0) {
+      console.log('🔍 Testing nested fields:');
+      
+      // Test tenant object
+      try {
+        JSON.stringify(response.tenant);
+        console.log('  ✅ tenant: OK');
+      } catch (err) {
+        console.log(`  ❌ tenant: FAILED - ${err.message}`);
+        fieldErrors.push({ field: 'tenant', error: err.message });
+      }
+      
+      // Test pgvector object
+      try {
+        JSON.stringify(response.pgvector);
+        console.log('  ✅ pgvector: OK');
+      } catch (err) {
+        console.log(`  ❌ pgvector: FAILED - ${err.message}`);
+        fieldErrors.push({ field: 'pgvector', error: err.message });
+      }
+      
+      // Test indexes object
+      try {
+        JSON.stringify(response.indexes);
+        console.log('  ✅ indexes: OK');
+      } catch (err) {
+        console.log(`  ❌ indexes: FAILED - ${err.message}`);
+        fieldErrors.push({ field: 'indexes', error: err.message });
+      }
+      
+      // Test embeddings object
+      try {
+        JSON.stringify(response.embeddings);
+        console.log('  ✅ embeddings: OK');
+      } catch (err) {
+        console.log(`  ❌ embeddings: FAILED - ${err.message}`);
+        fieldErrors.push({ field: 'embeddings', error: err.message });
+      }
+      
+      // Test tenants object
+      try {
+        JSON.stringify(response.tenants);
+        console.log('  ✅ tenants: OK');
+      } catch (err) {
+        console.log(`  ❌ tenants: FAILED - ${err.message}`);
+        fieldErrors.push({ field: 'tenants', error: err.message });
+      }
+      
+      // Test eden_levi_check object
+      try {
+        JSON.stringify(response.eden_levi_check);
+        console.log('  ✅ eden_levi_check: OK');
+      } catch (err) {
+        console.log(`  ❌ eden_levi_check: FAILED - ${err.message}`);
+        fieldErrors.push({ field: 'eden_levi_check', error: err.message });
+      }
+    }
 
     // Validate JSON before sending
     try {
-      JSON.stringify(response);
+      // Test for circular references using JSON.parse(JSON.stringify())
+      const testJson = JSON.parse(JSON.stringify(response));
+      console.log('✅ Full JSON serialization successful');
       res.json(response);
     } catch (jsonError) {
+      console.error('❌ Full JSON serialization failed:', jsonError.message);
+      console.error('Error stack:', jsonError.stack);
+      
       logger.error('Diagnostics JSON serialization error', {
         error: jsonError.message,
         position: jsonError.message.match(/position (\d+)/)?.[1],
+        fieldErrors: fieldErrors.length > 0 ? fieldErrors : undefined,
+        stack: jsonError.stack,
       });
       
-      // Return a safe fallback response
+      // Return a safe fallback response with debug info
       res.status(500).json({
         status: 'error',
         error: 'Failed to serialize response data',
+        message: jsonError.message,
+        debug: {
+          fieldErrors: fieldErrors.length > 0 ? fieldErrors : 'No field-level errors detected',
+          errorType: jsonError.message.includes('circular') ? 'circular_reference' : 
+                     jsonError.message.includes('BigInt') ? 'bigint_value' : 
+                     'unknown_serialization_error',
+        },
         timestamp: new Date().toISOString(),
         tenant: {
           domain: String(tenantDomain || ''),
@@ -253,25 +378,56 @@ export async function testVectorSearch(req, res, next) {
     });
 
     // Helper function to safely serialize data for JSON
-    const safeSerialize = (data) => {
+    // Handles BigInt, circular references, undefined values, and Prisma objects
+    const safeSerialize = (data, seen = new WeakSet()) => {
+      // Handle null/undefined
       if (data === null || data === undefined) return null;
-      if (typeof data === 'string') {
-        return data.replace(/\n/g, ' ').replace(/\r/g, ' ').replace(/\t/g, ' ').trim();
+      
+      // Handle BigInt - convert to string or number
+      if (typeof data === 'bigint') {
+        return Number(data);
       }
+      
+      // Handle circular references
       if (typeof data === 'object') {
-        if (Array.isArray(data)) {
-          return data.map(safeSerialize);
+        if (seen.has(data)) {
+          return '[Circular Reference]';
         }
+        seen.add(data);
+        
+        // Handle arrays
+        if (Array.isArray(data)) {
+          return data.map(item => safeSerialize(item, seen));
+        }
+        
+        // Handle Date objects
+        if (data instanceof Date) {
+          return data.toISOString();
+        }
+        
+        // Handle plain objects
         const cleaned = {};
         for (const [key, value] of Object.entries(data)) {
           try {
-            cleaned[key] = safeSerialize(value);
+            // Skip undefined values
+            if (value === undefined) {
+              continue;
+            }
+            cleaned[key] = safeSerialize(value, seen);
           } catch (e) {
+            // If serialization fails, convert to string
             cleaned[key] = String(value);
           }
         }
         return cleaned;
       }
+      
+      // Handle strings - clean up whitespace
+      if (typeof data === 'string') {
+        return data.replace(/\n/g, ' ').replace(/\r/g, ' ').replace(/\t/g, ' ').trim();
+      }
+      
+      // Handle other primitives
       return data;
     };
 
@@ -319,18 +475,24 @@ export async function testVectorSearch(req, res, next) {
 
     // Validate JSON before sending
     try {
-      JSON.stringify(response);
+      // Test for circular references using JSON.parse(JSON.stringify())
+      const testJson = JSON.parse(JSON.stringify(response));
       res.json(response);
     } catch (jsonError) {
+      console.error('❌ Vector search test JSON serialization failed:', jsonError.message);
+      console.error('Error stack:', jsonError.stack);
+      
       logger.error('Vector search test JSON serialization error', {
         error: jsonError.message,
         position: jsonError.message.match(/position (\d+)/)?.[1],
+        stack: jsonError.stack,
       });
       
       // Return a safe fallback response
       res.status(500).json({
         status: 'error',
         error: 'Failed to serialize response data',
+        message: jsonError.message,
         timestamp: new Date().toISOString(),
         test_query: String(testQuery || ''),
         tenant: {

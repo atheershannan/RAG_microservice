@@ -15,7 +15,7 @@
 **פשוט פתח את הדפדפן וכתוב את ה-URL:**
 
 ```
-https://YOUR-RAILWAY-APP.railway.app/api/debug/test-vector-search?query=What%20is%20Eden%20Levi%27s%20role?&tenant_id=default.local&threshold=0.3
+https://ragmicroservice-production.up.railway.app/api/debug/test-vector-search?query=What%20is%20Eden%20Levi%27s%20role?&tenant_id=default.local&threshold=0.3
 ```
 
 **החלף `YOUR-RAILWAY-APP` בשם האפליקציה שלך ב-Railway.**
