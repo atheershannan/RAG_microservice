@@ -354,7 +354,7 @@ export async function testVectorSearch(req, res, next) {
 
     // Import OpenAI config
     const { openai } = await import('../config/openai.config.js');
-    const { searchSimilarVectors } = await import('../services/vectorSearch.service.js');
+    const { unifiedVectorSearch } = await import('../services/unifiedVectorSearch.service.js');
 
     // Create embedding for test query
     const embeddingResponse = await openai.embeddings.create({
@@ -363,16 +363,16 @@ export async function testVectorSearch(req, res, next) {
     });
     const queryEmbedding = embeddingResponse.data[0].embedding;
 
-    // Perform vector search
+    // Perform vector search using unified service
     // NOTE: This test endpoint does NOT apply RBAC filtering - it shows all results
     // Production endpoint applies RBAC to filter user_profile content based on user role
-    const results = await searchSimilarVectors(queryEmbedding, tenantId, {
+    const results = await unifiedVectorSearch(queryEmbedding, tenantId, {
       limit: 10,
       threshold: parseFloat(threshold),
     });
 
     // Also try without threshold to see all similarities
-    const allResults = await searchSimilarVectors(queryEmbedding, tenantId, {
+    const allResults = await unifiedVectorSearch(queryEmbedding, tenantId, {
       limit: 20,
       threshold: 0.0, // No threshold
     });

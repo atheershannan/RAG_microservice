@@ -7,7 +7,7 @@ import { openai } from '../config/openai.config.js';
 import { logger } from '../utils/logger.util.js';
 import { getRedis, isRedisAvailable } from '../config/redis.config.js';
 import { getPrismaClient } from '../config/database.config.js';
-import { searchSimilarVectors } from './vectorSearch.service.js';
+import { unifiedVectorSearch } from './unifiedVectorSearch.service.js';
 import { getOrCreateTenant } from './tenant.service.js';
 import { getOrCreateUserProfile, getUserSkillGaps } from './userProfile.service.js';
 import { isEducoreQuery } from '../utils/query-classifier.util.js';
@@ -16,43 +16,43 @@ import { mergeResults, createContextBundle, handleFallbacks } from '../communica
 import { generatePersonalizedRecommendations } from './recommendations.service.js';
 
 /**
- * Generate a context-aware "no data" message based on filtering reason
+ * Generate a context-aware "no data" message based on filtering context
  * @param {string} userQuery - The user's query
- * @param {string} filteringReason - Why no results were found: 'NO_VECTOR_RESULTS', 'BELOW_THRESHOLD', 'RBAC_FILTERED', or null
- * @param {string} userRole - User's role (e.g., 'admin', 'user', 'anonymous')
+ * @param {Object} filteringContext - Filtering context with reason, counts, etc.
  * @returns {string} Appropriate error message
  */
-function generateNoDataMessage(userQuery, filteringReason = null, userRole = 'anonymous') {
+function generateNoResultsMessage(userQuery, filteringContext) {
   // Escape the query to prevent JSON issues with quotes and special characters
   const query = String(userQuery || '').trim();
-  // Use single quotes in template strings to avoid JSON issues, or escape properly
-  const safeQuery = query.replace(/"/g, "'"); // Replace double quotes with single quotes to avoid JSON issues
+  const safeQuery = query.replace(/"/g, "'"); // Replace double quotes with single quotes
+  const reason = filteringContext?.reason || 'NO_DATA';
+  const userRole = filteringContext?.userRole || 'anonymous';
   
-  // Scenario 1: Results filtered by RBAC (permission denied)
-  if (filteringReason === 'RBAC_FILTERED') {
-    if (userRole === 'admin') {
-      return `I found information about "${safeQuery}", but there may be a configuration issue with access permissions. Please check RBAC settings.`;
-    } else {
-      return `I found information about "${safeQuery}", but you don't have permission to access it. Your role: ${userRole}. Please contact your administrator if you need access.`;
-    }
+  switch(reason) {
+    case 'NO_PERMISSION':
+      // THIS IS THE KEY FIX: Distinguish permission from no data
+      if (userRole === 'admin') {
+        return `I found information about "${safeQuery}", but there may be a configuration issue with access permissions. Please check RBAC settings.`;
+      } else {
+        return `I found information about "${safeQuery}", but you don't have permission to access it. Your current role: ${userRole}. Please contact your administrator if you need access to this information.`;
+      }
+    
+    case 'LOW_SIMILARITY':
+      return `I found some content, but nothing closely matches "${safeQuery}". Please try rephrasing your question or add more relevant content.`;
+    
+    case 'NO_DATA':
+    default:
+      // No results found in vector search (default case)
+      const templates = [
+        (q) => `I couldn't find information about "${q}" in the knowledge base.`,
+        (q) => `There is currently no EDUCORE content matching "${q}".`,
+        (q) => `The EDUCORE knowledge base does not include information about "${q}".`,
+        (q) => `No relevant EDUCORE items were found for "${q}".`,
+      ];
+      const pick = Math.floor(Math.random() * templates.length);
+      const base = templates[pick](safeQuery);
+      return `${base} Please add or import relevant documents to improve future answers.`;
   }
-  
-  // Scenario 2: Results found but all below threshold (low similarity)
-  if (filteringReason === 'BELOW_THRESHOLD') {
-    return `I couldn't find relevant information about "${safeQuery}". The available content doesn't closely match your query. Please try rephrasing your question or adding more specific details.`;
-  }
-  
-  // Scenario 3: No results found in vector search (default case)
-  // This is the original behavior for when no embeddings match
-  const templates = [
-    (q) => `I couldn't find information about "${q}" in the knowledge base.`,
-    (q) => `There is currently no EDUCORE content matching "${q}".`,
-    (q) => `The EDUCORE knowledge base does not include information about "${q}".`,
-    (q) => `No relevant EDUCORE items were found for "${q}".`,
-  ];
-  const pick = Math.floor(Math.random() * templates.length);
-  const base = templates[pick](safeQuery);
-  return `${base} Please add or import relevant documents to improve future answers.`;
 }
 
 /**
@@ -329,9 +329,16 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
     let retrievedContext = '';
     let confidence = min_confidence;
     let similarVectors = []; // Initialize outside try block to avoid "not defined" error
-    let filteringReason = null; // Track why results were filtered: 'NO_VECTOR_RESULTS', 'BELOW_THRESHOLD', 'RBAC_FILTERED'
-    let vectorsBeforeRBAC = 0; // Track vectors before RBAC filtering
-    let vectorsAfterRBAC = 0; // Track vectors after RBAC filtering
+    
+    // 🎯 Filtering Context Tracking
+    let filteringContext = {
+      vectorResultsFound: 0,
+      afterThreshold: 0,
+      afterRBAC: 0,
+      reason: null, // 'NO_DATA', 'LOW_SIMILARITY', 'NO_PERMISSION', 'SUCCESS'
+      threshold: min_confidence,
+      userRole: userProfile?.role || context?.role || 'anonymous',
+    };
 
     try {
       logger.info('Starting vector search', {
@@ -342,20 +349,24 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         embedding_dimensions: queryEmbedding.length,
       });
       
-      console.log('🔍 Calling searchSimilarVectors with:', {
+      console.log('🔍 Calling unifiedVectorSearch with:', {
         embedding_length: queryEmbedding.length,
         tenant_id: actualTenantId,
         threshold: min_confidence,
         limit: max_results,
       });
       
-      similarVectors = await searchSimilarVectors(queryEmbedding, actualTenantId, {
+      // Use unified vector search service
+      similarVectors = await unifiedVectorSearch(queryEmbedding, actualTenantId, {
         limit: max_results,
         threshold: min_confidence,
       });
       
+      // Track initial results
+      filteringContext.vectorResultsFound = similarVectors.length;
+      
       // 🔍 Vector Search Raw Results - Detailed Logging
-      console.log('🔍 Vector Search Raw Results (from searchSimilarVectors):', {
+      console.log('🔍 Vector Search Raw Results (from unifiedVectorSearch):', {
         totalFound: similarVectors.length,
         threshold_used: min_confidence,
         topSimilarities: similarVectors.slice(0, 5).map(r => ({
@@ -369,16 +380,16 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       });
       
       // Track vectors before any filtering
-      vectorsBeforeRBAC = similarVectors.length;
+      filteringContext.afterThreshold = similarVectors.length;
       
       // Determine initial filtering reason
       if (similarVectors.length === 0) {
-        filteringReason = 'NO_VECTOR_RESULTS';
+        filteringContext.reason = 'NO_DATA';
       } else {
         // Check if results are below threshold (all similarities below min_confidence)
         const allBelowThreshold = similarVectors.every(v => v.similarity < min_confidence);
         if (allBelowThreshold) {
-          filteringReason = 'BELOW_THRESHOLD';
+          filteringContext.reason = 'LOW_SIMILARITY';
         }
       }
       
@@ -492,7 +503,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         : similarVectors.filter((vec) => vec.contentType !== 'user_profile');
       
       // Track vectors after RBAC filtering
-      vectorsAfterRBAC = filteredVectors.length;
+      filteringContext.afterRBAC = filteredVectors.length;
       
       // 🔍 AFTER RBAC Filtering - Detailed logging
       console.log('🔍 AFTER RBAC Filtering:', {
@@ -504,9 +515,9 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         userProfilesRemoved: allowUserProfiles ? 0 : userProfilesFound.length,
       });
       
-      // Update filtering reason if RBAC filtered out all results
+      // 🎯 Update filtering reason based on context
       if (similarVectors.length > 0 && filteredVectors.length === 0 && !allowUserProfiles) {
-        filteringReason = 'RBAC_FILTERED';
+        filteringContext.reason = 'NO_PERMISSION'; // Key fix: distinguish permission from no data
         console.error('⚠️ WARNING: RBAC filtered out ALL results!', {
           hadResults: similarVectors.length,
           hadUserProfiles: userProfilesFound.length,
@@ -516,11 +527,16 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
           hasSpecificUserName: hasSpecificUserName,
           matchedName: matchedName,
           query: query.substring(0, 100),
+          filteringContext: filteringContext,
         });
-      } else if (similarVectors.length > 0 && filteredVectors.length === 0 && allowUserProfiles) {
-        // If admin but still no results, it's not RBAC - keep original reason
-        // (could be BELOW_THRESHOLD or NO_VECTOR_RESULTS)
+      } else if (similarVectors.length > 0 && filteredVectors.length > 0) {
+        filteringContext.reason = 'SUCCESS';
+      } else if (similarVectors.length === 0) {
+        filteringContext.reason = 'NO_DATA';
       }
+      
+      // Log filtering context
+      console.log('🎯 Filtering Context:', filteringContext);
       
       logger.info('Vector filtering applied (RBAC)', {
         tenant_id: actualTenantId,
@@ -540,9 +556,9 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         translated_preview: translatedQuery?.substring(0, 50),
         query_for_embedding_preview: queryForEmbedding.substring(0, 50),
         threshold_used: min_confidence,
-        filtering_reason: filteringReason,
-        vectors_before_rbac: vectorsBeforeRBAC,
-        vectors_after_rbac: vectorsAfterRBAC,
+        filtering_reason: filteringContext.reason,
+        vectors_before_rbac: filteringContext.vectorResultsFound,
+        vectors_after_rbac: filteringContext.afterRBAC,
       });
 
       sources = filteredVectors.map((vec) => ({
@@ -576,22 +592,22 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         similar_vectors_count: similarVectors.length,
         threshold_used: min_confidence,
         query_preview: query.substring(0, 100),
-        filtering_reason: filteringReason,
-        vectors_before_rbac: vectorsBeforeRBAC,
-        vectors_after_rbac: vectorsAfterRBAC,
+        filtering_reason: filteringContext.reason,
+        vectors_before_rbac: filteringContext.vectorResultsFound,
+        vectors_after_rbac: filteringContext.afterRBAC,
       });
 
       // If no results found, try with lower threshold as fallback
       if (sources.length === 0) {
-        // Update filtering reason if we had vectors but they were filtered
+        // Update filtering context if we had vectors but they were filtered
         if (similarVectors.length > 0 && filteredVectors.length === 0) {
           // If we had vectors but they were all filtered by RBAC
-          if (filteringReason !== 'RBAC_FILTERED') {
+          if (filteringContext.reason !== 'NO_PERMISSION') {
             // If not RBAC, it might be threshold - but we'll check with lower threshold
-            filteringReason = 'BELOW_THRESHOLD';
+            filteringContext.reason = 'LOW_SIMILARITY';
           }
         } else if (similarVectors.length === 0) {
-          filteringReason = 'NO_VECTOR_RESULTS';
+          filteringContext.reason = 'NO_DATA';
         }
         
         logger.warn('No results with default threshold, trying with lower threshold', {
@@ -604,10 +620,10 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
           original_query: query.substring(0, 100),
           translated_query: translatedQuery?.substring(0, 100),
           embedding_dimensions: queryEmbedding.length,
-          filtering_reason: filteringReason,
+          filtering_reason: filteringContext.reason,
         });
         try {
-          const lowThresholdVectors = await searchSimilarVectors(queryEmbedding, actualTenantId, {
+          const lowThresholdVectors = await unifiedVectorSearch(queryEmbedding, actualTenantId, {
             limit: max_results * 3, // Get more results with lower threshold
             threshold: 0.1, // Lower threshold for fallback (was 0.2, now 0.1 to match test endpoint behavior)
           });
@@ -690,7 +706,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
               }
               
               // Clear filtering reason since we found results with lower threshold
-              filteringReason = null;
+              filteringContext.reason = 'SUCCESS';
 
               logger.info('Found results with lower threshold', {
                 tenant_id: actualTenantId,
@@ -700,14 +716,14 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
                 filtered_count: filteredLowThreshold.length,
               });
             } else {
-              // Update filtering reason if RBAC filtered out all low-threshold results
+              // Update filtering context if RBAC filtered out all low-threshold results
               if (lowThresholdVectors.length > 0 && filteredLowThreshold.length === 0 && !allowUserProfiles) {
-                filteringReason = 'RBAC_FILTERED';
+                filteringContext.reason = 'NO_PERMISSION';
               } else if (lowThresholdVectors.length > 0 && filteredLowThreshold.length === 0) {
                 // Results found but all filtered - could be threshold or RBAC
-                // Keep existing filteringReason if it's already set
-                if (!filteringReason || filteringReason === 'NO_VECTOR_RESULTS') {
-                  filteringReason = 'BELOW_THRESHOLD';
+                // Keep existing reason if it's already set
+                if (!filteringContext.reason || filteringContext.reason === 'NO_DATA') {
+                  filteringContext.reason = 'LOW_SIMILARITY';
                 }
               }
               
@@ -715,7 +731,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
                 tenant_id: actualTenantId,
                 total_found: lowThresholdVectors.length,
                 filtered_count: filteredLowThreshold.length,
-                filtering_reason: filteringReason,
+                filtering_reason: filteringContext.reason,
                 user_profiles_in_results: lowThresholdVectors.filter(v => v.contentType === 'user_profile').length,
                 allow_user_profiles: allowUserProfiles,
               });
@@ -840,16 +856,15 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
     // If still no context after gRPC → dynamic no-data with appropriate message
     if (sources.length === 0) {
       const processingTimeMs = Date.now() - startTime;
-      const userRole = userProfile?.role || 'anonymous';
-      const answer = generateNoDataMessage(query, filteringReason, userRole);
+      const answer = generateNoResultsMessage(query, filteringContext);
 
       // Determine reason code for response
       let reasonCode = 'no_edudata_context';
-      if (filteringReason === 'RBAC_FILTERED') {
+      if (filteringContext.reason === 'NO_PERMISSION') {
         reasonCode = 'permission_denied';
-      } else if (filteringReason === 'BELOW_THRESHOLD') {
+      } else if (filteringContext.reason === 'LOW_SIMILARITY') {
         reasonCode = 'below_threshold';
-      } else if (filteringReason === 'NO_VECTOR_RESULTS') {
+      } else if (filteringContext.reason === 'NO_DATA') {
         reasonCode = 'no_vector_results';
       }
 
@@ -873,9 +888,9 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
           cached: false,
           model_version: 'db-required',
           personalized: false,
-          filtering_reason: filteringReason ? String(filteringReason) : null,
-          vectors_before_rbac: Number(vectorsBeforeRBAC) || 0,
-          vectors_after_rbac: Number(vectorsAfterRBAC) || 0,
+          filtering_reason: filteringContext.reason ? String(filteringContext.reason) : null,
+          vectors_before_rbac: Number(filteringContext.vectorResultsFound) || 0,
+          vectors_after_rbac: Number(filteringContext.afterRBAC) || 0,
         },
       };
       
@@ -886,7 +901,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         logger.error('Response JSON validation failed', {
           error: jsonError.message,
           answer_preview: cleanAnswer.substring(0, 100),
-          filtering_reason: filteringReason,
+          filtering_reason: filteringContext.reason,
         });
         // Return a safe fallback response
         return {
@@ -910,9 +925,9 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         user_id,
         category,
         processing_time_ms: processingTimeMs,
-        filtering_reason: filteringReason,
-        vectors_before_rbac: vectorsBeforeRBAC,
-        vectors_after_rbac: vectorsAfterRBAC,
+        filtering_reason: filteringContext.reason,
+        vectors_before_rbac: filteringContext.vectorResultsFound,
+        vectors_after_rbac: filteringContext.afterRBAC,
         user_role: userRole,
         reason_code: reasonCode,
       });
