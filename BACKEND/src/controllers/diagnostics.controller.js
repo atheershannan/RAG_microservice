@@ -164,6 +164,10 @@ export async function getEmbeddingsStatus(req, res, next) {
 /**
  * GET /api/debug/test-vector-search
  * Test vector search with a sample query
+ * 
+ * NOTE: This endpoint does NOT apply RBAC filtering for debugging purposes.
+ * It shows raw vector search results to help diagnose issues.
+ * The production endpoint (/api/v1/query) applies RBAC filtering.
  */
 export async function testVectorSearch(req, res, next) {
   try {
@@ -192,6 +196,8 @@ export async function testVectorSearch(req, res, next) {
     const queryEmbedding = embeddingResponse.data[0].embedding;
 
     // Perform vector search
+    // NOTE: This test endpoint does NOT apply RBAC filtering - it shows all results
+    // Production endpoint applies RBAC to filter user_profile content based on user role
     const results = await searchSimilarVectors(queryEmbedding, tenantId, {
       limit: 10,
       threshold: parseFloat(threshold),

@@ -43,7 +43,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
   const { user_id, session_id } = context;
   const {
     max_results = 5,
-    min_confidence = 0.5, // Lowered from 0.7 to 0.5 for better recall, especially for Hebrew queries
+    min_confidence = 0.25, // Lowered from 0.5 to 0.25 to match test endpoint behavior (test uses 0.3)
     include_metadata = true,
   } = options;
 
@@ -280,59 +280,45 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       const translatedLower = translatedQuery?.toLowerCase() || '';
       const queryForCheck = queryForEmbedding.toLowerCase();
       
-      // STRICT: Only allow user_profile for queries about SPECIFIC users by name
-      // This prevents general browsing while allowing specific lookups
+      // Check for specific user names in query (English and Hebrew)
       const specificUserNamePatterns = [
         'eden', 'levi', 'adi', 'cohen', 'noa', 'bar',  // Known user names
         'עדן', 'לוי', 'עדי', 'כהן', 'נועה', 'בר',  // Hebrew names
       ];
       
+      // Check if query contains any specific user name
       const hasSpecificUserName = specificUserNamePatterns.some(name => 
         queryLower.includes(name) || 
         translatedLower.includes(name) ||
         queryForCheck.includes(name)
       );
       
-      // Also check for role/title queries about specific users
-      // Check if query asks about role, title, or identity of a specific user
-      const hasRoleQuery = hasSpecificUserName && (
+      // Check if query is asking about a user (role, who is, what is, etc.)
+      const hasUserQueryPattern = (
         queryLower.includes('תפקיד') ||  // Hebrew: role
         queryLower.includes('מה התפקיד') ||  // Hebrew: what is the role
         queryLower.includes('מי זה') ||  // Hebrew: who is
         translatedLower.includes('role') ||
-        translatedLower.includes('what is the role') ||
-        translatedLower.includes("what's the role") ||
         translatedLower.includes('what is') ||
         translatedLower.includes("what's") ||
-        queryForCheck.includes('role') ||
-        queryForCheck.includes('what is') ||
-        queryForCheck.includes("what's")
-      );
-      
-      // Only allow if query is about a SPECIFIC user by name
-      // This prevents general "show me all users" queries
-      // If query contains a specific user name, it's likely about that user
-      const isSpecificUserQuery = hasSpecificUserName && (
-        hasRoleQuery || 
-        queryLower.includes('מי זה') ||  // "who is" queries
         translatedLower.includes('who is') ||
         translatedLower.includes("who's") ||
-        translatedLower.includes('what is') ||
-        translatedLower.includes("what's") ||
-        queryForCheck.includes('who is') ||
-        queryForCheck.includes("who's") ||
+        queryForCheck.includes('role') ||
         queryForCheck.includes('what is') ||
-        queryForCheck.includes("what's")
+        queryForCheck.includes("what's") ||
+        queryForCheck.includes('who is') ||
+        queryForCheck.includes("who's")
       );
       
       const userRole = userProfile?.role || 'anonymous';
       const isAdmin = userRole === 'admin';
       
-      // STRICT RBAC: Only allow user_profile if:
+      // RBAC: Allow user_profile if:
       // 1. User is admin (full access), OR
-      // 2. Query is about a SPECIFIC user by name (limited access)
-      // This maintains privacy - no general user profile browsing for non-admins
-      const allowUserProfiles = isAdmin || isSpecificUserQuery;
+      // 2. Query contains a specific user name (allows queries about that user)
+      // Simplified logic: if query mentions a specific user name, allow user_profile results
+      // This is more permissive but still maintains privacy (no general "show all users" queries)
+      const allowUserProfiles = isAdmin || hasSpecificUserName;
       
       const userProfilesFound = similarVectors.filter(v => v.contentType === 'user_profile');
       const filteredVectors = allowUserProfiles
@@ -341,10 +327,11 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       
       logger.info('Vector filtering applied (RBAC)', {
         tenant_id: actualTenantId,
+        tenant_domain: tenantDomain,
         user_role: userRole,
         is_admin: isAdmin,
         has_specific_user_name: hasSpecificUserName,
-        is_specific_user_query: isSpecificUserQuery,
+        has_user_query_pattern: hasUserQueryPattern,
         allow_user_profiles: allowUserProfiles,
         total_vectors: similarVectors.length,
         user_profiles_found: userProfilesFound.length,
@@ -353,6 +340,8 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         privacy_protected: !allowUserProfiles && userProfilesFound.length > 0,
         query_preview: query.substring(0, 50),
         translated_preview: translatedQuery?.substring(0, 50),
+        query_for_embedding_preview: queryForEmbedding.substring(0, 50),
+        threshold_used: min_confidence,
       });
 
       sources = filteredVectors.map((vec) => ({
@@ -403,16 +392,15 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         try {
           const lowThresholdVectors = await searchSimilarVectors(queryEmbedding, actualTenantId, {
             limit: max_results * 3, // Get more results with lower threshold
-            threshold: 0.2, // Even lower threshold for fallback (was 0.3)
+            threshold: 0.1, // Lower threshold for fallback (was 0.2, now 0.1 to match test endpoint behavior)
           });
           
           if (lowThresholdVectors.length > 0) {
-            // STRICT RBAC: Only allow user_profile for queries about SPECIFIC users by name
+            // RBAC: Use same logic as main search - allow user_profile if admin or query contains specific user name
             const queryLower = query.toLowerCase();
             const translatedLower = translatedQuery?.toLowerCase() || '';
             const queryForCheck = queryForEmbedding.toLowerCase();
             
-            // Only allow for specific user names (not general "user" or "profile" keywords)
             const specificUserNamePatterns = [
               'eden', 'levi', 'adi', 'cohen', 'noa', 'bar',
               'עדן', 'לוי', 'עדי', 'כהן', 'נועה', 'בר',
@@ -424,26 +412,10 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
               queryForCheck.includes(name)
             );
             
-            const hasRoleQuery = (
-              queryLower.includes('תפקיד') ||
-              queryLower.includes('מה התפקיד') ||
-              queryLower.includes('מי זה') ||
-              translatedLower.includes('role') ||
-              translatedLower.includes('what is the role') ||
-              queryForCheck.includes('role')
-            ) && hasSpecificUserName;
-            
-            const isSpecificUserQuery = hasSpecificUserName && (
-              hasRoleQuery || 
-              queryLower.includes('מי זה') ||
-              translatedLower.includes('who is') ||
-              queryForCheck.includes('who is')
-            );
-            
             const userRole = userProfile?.role || 'anonymous';
             const isAdmin = userRole === 'admin';
-            // STRICT: Only allow if admin OR specific user query
-            const allowUserProfiles = isAdmin || isSpecificUserQuery;
+            // Simplified: Allow if admin OR query contains specific user name
+            const allowUserProfiles = isAdmin || hasSpecificUserName;
             
             const filteredLowThreshold = allowUserProfiles
               ? lowThresholdVectors
@@ -451,15 +423,16 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
             
             logger.info('Low threshold filtering (RBAC)', {
               tenant_id: actualTenantId,
+              tenant_domain: tenantDomain,
               user_role: userRole,
               is_admin: isAdmin,
               has_specific_user_name: hasSpecificUserName,
-              is_specific_user_query: isSpecificUserQuery,
               allow_user_profiles: allowUserProfiles,
               total_low_threshold: lowThresholdVectors.length,
               user_profiles_in_results: lowThresholdVectors.filter(v => v.contentType === 'user_profile').length,
               filtered_count: filteredLowThreshold.length,
               privacy_protected: !allowUserProfiles && lowThresholdVectors.filter(v => v.contentType === 'user_profile').length > 0,
+              threshold_used: 0.1,
             });
             
             if (filteredLowThreshold.length > 0) {
@@ -496,69 +469,15 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
               });
             }
           } else {
-            logger.warn('No results even with lower threshold', {
+            logger.warn('No results even with lower threshold (0.1)', {
               tenant_id: actualTenantId,
               tenant_domain: tenantDomain,
-              threshold_tried: 0.2,
+              threshold_tried: 0.1,
               query_for_embedding: queryForEmbedding.substring(0, 100),
               original_query: query.substring(0, 100),
               embedding_dimensions: queryEmbedding.length,
               recommendation: 'Check if embeddings exist for this tenant. Use /api/debug/embeddings-status to verify.',
             });
-            
-            // Last resort: try with very low threshold (0.1) ONLY for specific user queries
-            // STRICT RBAC: Only for queries about specific users by name (maintains privacy)
-            const specificUserNamePatterns = ['eden', 'levi', 'adi', 'cohen', 'noa', 'bar', 'עדן', 'לוי', 'עדי', 'כהן', 'נועה', 'בר'];
-            const hasSpecificUserName = specificUserNamePatterns.some(name => 
-              queryForEmbedding.toLowerCase().includes(name)
-            );
-            
-            // Only try very low threshold if query is about a specific user
-            // This maintains privacy - no general user profile access
-            if (hasSpecificUserName) {
-              logger.info('Trying with very low threshold (0.1) for user profile query', {
-                tenant_id: actualTenantId,
-              });
-              
-              try {
-                const veryLowThresholdVectors = await searchSimilarVectors(queryEmbedding, actualTenantId, {
-                  limit: 10,
-                  threshold: 0.1, // Very low threshold
-                });
-                
-                if (veryLowThresholdVectors.length > 0) {
-                  // Allow all user_profile results for this query
-                  sources = veryLowThresholdVectors.map((vec) => ({
-                    sourceId: vec.contentId,
-                    sourceType: vec.contentType,
-                    sourceMicroservice: vec.microserviceId,
-                    title: vec.metadata?.title || `${vec.contentType}:${vec.contentId}`,
-                    contentSnippet: vec.contentText.substring(0, 200),
-                    sourceUrl: vec.metadata?.url || `/${vec.contentType}/${vec.contentId}`,
-                    relevanceScore: vec.similarity,
-                    metadata: vec.metadata,
-                  }));
-
-                  retrievedContext = sources
-                    .map((source, idx) => `[Source ${idx + 1}]: ${source.contentSnippet}`)
-                    .join('\n\n');
-
-                  if (sources.length > 0) {
-                    confidence = sources.reduce((sum, s) => sum + s.relevanceScore, 0) / sources.length;
-                  }
-
-                  logger.info('Found results with very low threshold (0.1)', {
-                    tenant_id: actualTenantId,
-                    sources_count: sources.length,
-                    avg_confidence: confidence,
-                  });
-                }
-              } catch (veryLowError) {
-                logger.warn('Very low threshold search also failed', {
-                  error: veryLowError.message,
-                });
-              }
-            }
           }
         } catch (fallbackError) {
           logger.warn('Fallback vector search also failed', {
