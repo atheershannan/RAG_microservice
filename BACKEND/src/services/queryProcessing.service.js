@@ -451,6 +451,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       
       // Track initial results
       filteringContext.vectorResultsFound = similarVectors.length;
+      filteringContext.userProfilesFound = similarVectors.filter(v => v.contentType === 'user_profile').length;
       
       // 🔍 Vector Search Raw Results - Detailed Logging
       console.log('🔍 Vector Search Raw Results (from unifiedVectorSearch):', {
@@ -1170,11 +1171,25 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
     // If still no context after gRPC → dynamic no-data with appropriate message
     if (sources.length === 0) {
       const processingTimeMs = Date.now() - startTime;
+      
+      // 🔍 DEBUG: Log filtering context before generating message
+      console.log('🔍 DEBUG: No sources found, generating error message:', {
+        query: query.substring(0, 100),
+        filteringContext: {
+          reason: filteringContext.reason,
+          vectorResultsFound: filteringContext.vectorResultsFound,
+          userProfilesFound: filteringContext.userProfilesFound,
+          userProfilesRemoved: filteringContext.userProfilesRemoved,
+          userRole: filteringContext.userRole,
+          isAuthenticated: filteringContext.isAuthenticated,
+        }
+      });
+      
       const answer = generateNoResultsMessage(query, filteringContext);
 
       // Determine reason code for response
       let reasonCode = 'no_edudata_context';
-      if (filteringContext.reason === 'NO_PERMISSION') {
+      if (filteringContext.reason === 'NO_PERMISSION' || filteringContext.reason === 'RBAC_BLOCKED_USER_PROFILES' || filteringContext.reason === 'RBAC_BLOCKED_ALL') {
         reasonCode = 'permission_denied';
       } else if (filteringContext.reason === 'LOW_SIMILARITY') {
         reasonCode = 'below_threshold';
