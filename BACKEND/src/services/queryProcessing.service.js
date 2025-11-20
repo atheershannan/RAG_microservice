@@ -222,6 +222,14 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
     let queryForEmbedding = query;
     let translatedQuery = null;
     
+    // 📝 Query Transformations - Detailed Logging
+    console.log('📝 Query Transformations - START:', {
+      original_query: query,
+      original_length: query.length,
+      has_hebrew: /[\u0590-\u05FF]/.test(query),
+      query_for_embedding_initial: queryForEmbedding,
+    });
+    
     try {
       // Detect if query contains Hebrew characters
       const hasHebrew = /[\u0590-\u05FF]/.test(query);
@@ -230,6 +238,8 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         logger.info('Detected Hebrew in query, translating to English for better vector matching', {
           original_query: query.substring(0, 100),
         });
+        
+        console.log('🌐 Attempting translation...');
         
         // Translate to English using OpenAI
         const translationResponse = await openai.chat.completions.create({
@@ -248,23 +258,71 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         translatedQuery = translationResponse.choices[0]?.message?.content?.trim() || query;
         queryForEmbedding = translatedQuery;
         
+        console.log('🌐 Translation Result:', {
+          original: query,
+          translated: translatedQuery,
+          using_translated: true,
+        });
+        
         logger.info('Query translated', {
           original: query.substring(0, 100),
           translated: translatedQuery.substring(0, 100),
         });
+      } else {
+        console.log('🌐 No translation needed (no Hebrew detected)');
       }
     } catch (translationError) {
+      console.error('❌ Translation failed:', {
+        error: translationError.message,
+        using_original_query: true,
+      });
+      
       logger.warn('Translation failed, using original query', {
         error: translationError.message,
       });
       // Continue with original query if translation fails
     }
     
+    // 📝 Query Transformations - FINAL
+    console.log('📝 Query Transformations - FINAL:', {
+      original_query: query,
+      translated_query: translatedQuery || 'none',
+      final_query_for_embedding: queryForEmbedding,
+      query_was_modified: queryForEmbedding !== query,
+      modification_type: translatedQuery ? 'translated' : 'unchanged',
+    });
+    
+    // 🔍 Vector Search Parameters - Detailed Logging
+    console.log('🔍 Vector Search Parameters:', {
+      original_query: query.substring(0, 100),
+      query_for_embedding: queryForEmbedding.substring(0, 100),
+      translated_query: translatedQuery?.substring(0, 100) || 'none',
+      tenant_id: actualTenantId,
+      tenant_id_type: typeof actualTenantId,
+      tenant_id_as_string: String(actualTenantId),
+      is_valid_uuid: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(actualTenantId),
+      threshold: min_confidence,
+      limit: max_results,
+      query_was_translated: !!translatedQuery,
+      query_has_hebrew: /[\u0590-\u05FF]/.test(query),
+    });
+
     const embeddingResponse = await openai.embeddings.create({
       model: 'text-embedding-ada-002',
       input: queryForEmbedding, // Use translated query for embedding
     });
     const queryEmbedding = embeddingResponse.data[0].embedding;
+
+    // 📊 Embedding Generated - Detailed Logging
+    console.log('📊 Embedding Generated:', {
+      dimensions: queryEmbedding.length,
+      preview: queryEmbedding.slice(0, 5),
+      query_used: queryForEmbedding.substring(0, 100),
+      model: 'text-embedding-ada-002',
+      embedding_sum: queryEmbedding.reduce((a, b) => a + b, 0),
+      embedding_min: Math.min(...queryEmbedding),
+      embedding_max: Math.max(...queryEmbedding),
+    });
 
     // Vector similarity search in PostgreSQL (pgvector)
     let sources = [];
@@ -284,9 +342,30 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         embedding_dimensions: queryEmbedding.length,
       });
       
+      console.log('🔍 Calling searchSimilarVectors with:', {
+        embedding_length: queryEmbedding.length,
+        tenant_id: actualTenantId,
+        threshold: min_confidence,
+        limit: max_results,
+      });
+      
       similarVectors = await searchSimilarVectors(queryEmbedding, actualTenantId, {
         limit: max_results,
         threshold: min_confidence,
+      });
+      
+      // 🔍 Vector Search Raw Results - Detailed Logging
+      console.log('🔍 Vector Search Raw Results (from searchSimilarVectors):', {
+        totalFound: similarVectors.length,
+        threshold_used: min_confidence,
+        topSimilarities: similarVectors.slice(0, 5).map(r => ({
+          contentId: r.contentId,
+          contentType: r.contentType,
+          similarity: r.similarity,
+          contentTextPreview: r.contentText?.substring(0, 50),
+        })),
+        allContentTypes: [...new Set(similarVectors.map(r => r.contentType))],
+        allContentIds: similarVectors.map(r => r.contentId),
       });
       
       // Track vectors before any filtering
@@ -1095,7 +1174,7 @@ async function saveQueryToDatabase({
           create: recommendations.map((rec) => ({
             recommendationType: rec.type,
             recommendationId: rec.id,
-            title: rec.title,
+            title: rec.title || rec.label || '', // Use label as fallback if title is missing
             description: rec.description || '',
             reason: rec.reason || '',
             priority: rec.priority || 0,

@@ -37,6 +37,18 @@ export async function searchSimilarVectors(
   try {
     const prisma = await getPrismaClient();
 
+    // 🔍 Vector Search Service - Detailed Logging
+    console.log('🔍 Vector Search Service Called:', {
+      tenantId: tenantId,
+      tenantId_type: typeof tenantId,
+      tenantId_string: String(tenantId),
+      threshold: threshold,
+      limit: limit,
+      embedding_length: queryEmbedding?.length || 0,
+      embedding_preview: queryEmbedding?.slice(0, 5) || [],
+      options: options,
+    });
+
     // Build the query using raw SQL for pgvector similarity search
     // pgvector uses cosine distance: 1 - cosine_similarity
     // We want results where similarity > threshold
@@ -111,7 +123,29 @@ export async function searchSimilarVectors(
       LIMIT $${limitParamIndex}
     `;
 
+    // 🔍 Execute Vector Search Query
+    console.log('🔍 Executing SQL Query:', {
+      query_preview: query.substring(0, 200),
+      params_count: params.length,
+      tenantId_param: params[0],
+      threshold_param: threshold,
+      limit_param: limit,
+    });
+
     const results = await prisma.$queryRawUnsafe(query, ...params);
+
+    // 🔍 Vector Search Results - Detailed Logging
+    console.log('🔍 Vector Search SQL Results:', {
+      totalFound: results.length,
+      threshold_used: threshold,
+      limit_used: limit,
+      topSimilarities: results.slice(0, 5).map(r => ({
+        contentId: r.content_id,
+        contentType: r.content_type,
+        similarity: parseFloat(r.similarity),
+        raw_similarity: r.similarity,
+      })),
+    });
 
     logger.info('Vector search completed', {
       tenantId,
@@ -132,6 +166,13 @@ export async function searchSimilarVectors(
         contentTextPreview: results[0].content_text?.substring(0, 100),
       });
     } else {
+      // ⚠️ No Results Found - Detailed Diagnostic Logging
+      console.warn('⚠️ No vector search results found with threshold:', {
+        tenantId: tenantId,
+        threshold: threshold,
+        limit: limit,
+      });
+      
       // If no results, check if there's any data in the table
       const totalCount = await prisma.$queryRaw(
         Prisma.sql`SELECT COUNT(*)::int as count FROM vector_embeddings WHERE tenant_id = ${tenantId}`
@@ -161,6 +202,22 @@ export async function searchSimilarVectors(
         LIMIT 10
       `;
       const topResults = await prisma.$queryRawUnsafe(testQuery, tenantId).catch(() => []);
+      
+      // 🔍 Diagnostic: Results Without Threshold
+      console.log('🔍 Diagnostic: Results WITHOUT Threshold:', {
+        totalRecordsForThisTenant: totalCount[0]?.count || 0,
+        allTenantsData: allTenantsCount,
+        edenLeviExists: edenLeviCheck.length > 0,
+        edenLeviTenantIds: edenLeviCheck.map(r => r.tenant_id),
+        topSimilaritiesWithoutThreshold: topResults.slice(0, 10).map(r => ({
+          contentId: r.content_id,
+          contentType: r.content_type,
+          similarity: parseFloat(r.similarity),
+        })),
+        threshold_used_in_query: threshold,
+        max_similarity_found: topResults.length > 0 ? parseFloat(topResults[0].similarity) : null,
+        results_above_threshold: topResults.filter(r => parseFloat(r.similarity) >= threshold).length,
+      });
       
       logger.warn('No vector search results found', {
         tenantId,
