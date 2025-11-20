@@ -51,6 +51,17 @@ function generateNoResultsMessage(userQuery, filteringContext) {
     query: safeQuery,
   });
   
+  // 🐛 DEBUG: Additional debug for Eden Levi message generation
+  if (safeQuery.toLowerCase().includes('eden') && safeQuery.toLowerCase().includes('levi')) {
+    console.log('🚨 EDEN LEVI MESSAGE GENERATION DEBUG:', {
+      reason: reason,
+      willUsePermissionMessage: reason === 'RBAC_BLOCKED_USER_PROFILES' || reason === 'NO_PERMISSION',
+      hasSpecificUserName: hasSpecificUserName,
+      userProfilesFound: userProfilesFound,
+      userProfilesRemoved: userProfilesRemoved
+    });
+  }
+  
   switch(reason) {
     case 'NO_PERMISSION':
     case 'RBAC_BLOCKED_USER_PROFILES':
@@ -102,7 +113,7 @@ function generateNoResultsMessage(userQuery, filteringContext) {
       const templates = [
         (q) => `I couldn't find information about "${q}" in the knowledge base.`,
         (q) => `There is currently no EDUCORE content matching "${q}".`,
-        (q) => `The EDUCORE knowledge base does not include information about "${q}".`,
+        (q) => `I couldn't find any EDUCORE content about "${q}".`,
         (q) => `No relevant EDUCORE items were found for "${q}".`,
       ];
       const pick = Math.floor(Math.random() * templates.length);
@@ -535,6 +546,18 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         queryForCheck.includes(name)
       );
       
+      // 🐛 DEBUG: Log user name detection
+      console.log('🔍 User Name Detection Debug:', {
+        query: query,
+        queryLower: queryLower,
+        hasSpecificUserName: hasSpecificUserName,
+        matchedPatterns: specificUserNamePatterns.filter(name => 
+          queryLower.includes(name) || 
+          translatedLower.includes(name) ||
+          queryForCheck.includes(name)
+        )
+      });
+      
       // Find which name matched
       const matchedName = specificUserNamePatterns.find(name => 
         queryLower.includes(name) || 
@@ -822,6 +845,18 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       
       // Log filtering context
       console.log('🎯 Filtering Context:', filteringContext);
+      
+      // 🐛 DEBUG: Additional debug for Eden Levi query
+      if (query.toLowerCase().includes('eden') && query.toLowerCase().includes('levi')) {
+        console.log('🚨 EDEN LEVI QUERY DEBUG:', {
+          query: query,
+          reason: filteringContext.reason,
+          hasSpecificUserName: hasSpecificUserName,
+          userProfilesFound: filteringContext.userProfilesFound,
+          userProfilesRemoved: filteringContext.userProfilesRemoved,
+          willTriggerEarlyReturn: filteringContext.reason === 'RBAC_BLOCKED_USER_PROFILES'
+        });
+      }
       
       logger.info('Vector filtering applied (RBAC)', {
         tenant_id: actualTenantId,
