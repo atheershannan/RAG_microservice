@@ -37,6 +37,8 @@ function generateNoResultsMessage(userQuery, filteringContext) {
   const isAuthenticated = filteringContext?.isAuthenticated || false;
   const userProfilesFound = filteringContext?.userProfilesFound || 0;
   const userProfilesRemoved = filteringContext?.userProfilesRemoved || 0;
+  const hasSpecificUserName = filteringContext?.hasSpecificUserName || false;
+  const matchedName = filteringContext?.matchedName || '';
   
   console.log('📢 Generating No Results Message:', {
     reason,
@@ -44,13 +46,15 @@ function generateNoResultsMessage(userQuery, filteringContext) {
     isAuthenticated,
     userProfilesFound,
     userProfilesRemoved,
+    hasSpecificUserName,
+    matchedName,
     query: safeQuery,
   });
   
   switch(reason) {
     case 'NO_PERMISSION':
     case 'RBAC_BLOCKED_USER_PROFILES':
-      // 🔐 SECURITY: User profiles were found but blocked by RBAC
+      // 🔐 SECURITY: User asked about a specific user profile and it was blocked
       if (!isAuthenticated || userRole === 'anonymous' || userRole === 'guest') {
         return `I found information about "${safeQuery}", but you need to log in to access employee information. Please authenticate to continue.`;
       } else if (userRole === 'admin') {
@@ -66,6 +70,12 @@ function generateNoResultsMessage(userQuery, filteringContext) {
       } else {
         return `You don't have permission to access this information. Role: ${userRole}. Contact your administrator for access.`;
       }
+    
+    case 'PARTIAL_RBAC_BLOCK':
+      // Some results were blocked but others remain - this shouldn't generate a message
+      // The remaining results should be returned normally
+      console.log('⚠️ PARTIAL_RBAC_BLOCK: This should not generate an error message - remaining results should be shown');
+      return null; // Don't generate error message for partial blocks
     
     case 'LOW_SIMILARITY':
       return `I found some content, but nothing closely matches "${safeQuery}". Please try rephrasing your question or add more relevant content.`;
@@ -737,26 +747,52 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         userProfilesRemoved: filteringContext.userProfilesRemoved,
       });
       
-      // 🎯 Update filtering reason based on context - IMPROVED LOGIC
+      // 🎯 Update filtering reason based on context - FIXED LOGIC
+      // Store context variables for reason determination
+      filteringContext.hasSpecificUserName = hasSpecificUserName;
+      filteringContext.matchedName = matchedName;
+      
       if (similarVectors.length === 0) {
         // No vector results at all
         filteringContext.reason = 'NO_DATA';
-      } else if (filteringContext.userProfilesRemoved > 0 && filteredVectors.length === 0) {
-        // Had user profiles but all were removed by RBAC and nothing else left
-        filteringContext.reason = 'RBAC_BLOCKED_USER_PROFILES';
-        console.warn('🚨 RBAC Security: User profile access blocked - all results filtered', {
+      } else if (filteredVectors.length === 0) {
+        // ALL results were blocked
+        if (filteringContext.userProfilesRemoved > 0) {
+          filteringContext.reason = 'RBAC_BLOCKED_USER_PROFILES';
+        } else {
+          filteringContext.reason = 'RBAC_BLOCKED_ALL';
+        }
+        console.warn('🚨 RBAC Security: All results blocked', {
           userRole: userRole,
           userId: user_id || 'anonymous',
           isAuthenticated: isAuthenticated,
           query: query.substring(0, 100),
           userProfilesFound: filteringContext.userProfilesFound,
           userProfilesRemoved: filteringContext.userProfilesRemoved,
+          hasSpecificUserName: hasSpecificUserName,
+          matchedName: matchedName,
           action: 'BLOCKED_ALL_RESULTS'
         });
+      } else if (filteringContext.userProfilesRemoved > 0 && hasSpecificUserName) {
+        // 🔑 KEY FIX: User asked about a SPECIFIC USER, and that user profile was blocked
+        // Even if other results remain, this is the PRIMARY issue
+        filteringContext.reason = 'RBAC_BLOCKED_USER_PROFILES';
+        console.warn('🚨 RBAC Security: User asked specifically about user profile - blocked', {
+          userRole: userRole,
+          userId: user_id || 'anonymous',
+          isAuthenticated: isAuthenticated,
+          query: query.substring(0, 100),
+          hasSpecificUserName: hasSpecificUserName,
+          matchedName: matchedName,
+          userProfilesFound: filteringContext.userProfilesFound,
+          userProfilesRemoved: filteringContext.userProfilesRemoved,
+          remainingResults: filteredVectors.length,
+          action: 'SPECIFIC_USER_PROFILE_BLOCKED'
+        });
       } else if (filteringContext.userProfilesRemoved > 0) {
-        // Had user profiles, some were removed, but other results remain
-        filteringContext.reason = 'SUCCESS'; // Still have some results
-        console.warn('🚨 RBAC Security: Some user profiles blocked', {
+        // Some user profiles blocked but query wasn't specifically about a user
+        filteringContext.reason = 'PARTIAL_RBAC_BLOCK';
+        console.warn('🚨 RBAC Security: Some user profiles blocked (partial)', {
           userRole: userRole,
           userId: user_id || 'anonymous',
           isAuthenticated: isAuthenticated,
@@ -766,9 +802,6 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
           remainingResults: filteredVectors.length,
           action: 'PARTIAL_BLOCK'
         });
-      } else if (similarVectors.length > 0 && filteredVectors.length === 0) {
-        // Had results but all filtered (not user profiles)
-        filteringContext.reason = 'RBAC_BLOCKED_ALL';
       } else if (filteredVectors.length > 0) {
         // Have results after filtering
         filteringContext.reason = 'SUCCESS';
@@ -776,6 +809,16 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         // Fallback
         filteringContext.reason = 'NO_DATA';
       }
+      
+      console.log('🎯 Filtering Reason Determined:', {
+        reason: filteringContext.reason,
+        hasSpecificUserName: hasSpecificUserName,
+        matchedName: matchedName,
+        userProfilesRemoved: filteringContext.userProfilesRemoved,
+        afterRBAC: filteredVectors.length,
+        vectorResultsFound: filteringContext.vectorResultsFound,
+        userProfilesFound: filteringContext.userProfilesFound,
+      });
       
       // Log filtering context
       console.log('🎯 Filtering Context:', filteringContext);
@@ -1168,6 +1211,68 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       });
     }
 
+    // 🔑 CRITICAL FIX: Handle RBAC_BLOCKED_USER_PROFILES before checking sources.length
+    if (filteringContext.reason === 'RBAC_BLOCKED_USER_PROFILES') {
+      // User asked specifically about a user profile and it was blocked
+      const processingTimeMs = Date.now() - startTime;
+      const answer = generateNoResultsMessage(query, filteringContext);
+      
+      console.log('📢 Returning Permission Denied Message for User Profile Query:', {
+        reason: filteringContext.reason,
+        hasSpecificUserName: filteringContext.hasSpecificUserName,
+        matchedName: filteringContext.matchedName,
+        userProfilesRemoved: filteringContext.userProfilesRemoved,
+        message: answer
+      });
+      
+      const cleanAnswer = String(answer || '')
+        .replace(/\n/g, ' ')
+        .replace(/\r/g, ' ')
+        .replace(/\t/g, ' ')
+        .trim();
+      
+      const response = {
+        answer: cleanAnswer,
+        abstained: true,
+        reason: 'permission_denied',
+        confidence: 0,
+        sources: [],
+        metadata: {
+          processing_time_ms: Number(processingTimeMs) || 0,
+          sources_retrieved: 0,
+          cached: false,
+          model_version: 'rbac-blocked',
+          personalized: false,
+          filtering_reason: 'RBAC_BLOCKED_USER_PROFILES',
+          userProfilesBlocked: filteringContext.userProfilesRemoved,
+          hasSpecificUserName: filteringContext.hasSpecificUserName,
+          matchedName: filteringContext.matchedName,
+        },
+      };
+      
+      // Save query to database for analytics
+      try {
+        await saveQueryToDatabase({
+          tenantId: actualTenantId,
+          userId: user_id || 'anonymous',
+          sessionId: session_id,
+          queryText: query,
+          answer: cleanAnswer,
+          confidenceScore: 0,
+          processingTimeMs,
+          modelVersion: 'rbac-blocked',
+          isPersonalized: false,
+          isCached: false,
+          sources: [],
+          recommendations: [],
+        });
+      } catch (_) {
+        // ignore persistence errors
+      }
+      
+      return response;
+    }
+
     // If still no context after gRPC → dynamic no-data with appropriate message
     if (sources.length === 0) {
       const processingTimeMs = Date.now() - startTime;
@@ -1191,6 +1296,8 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       let reasonCode = 'no_edudata_context';
       if (filteringContext.reason === 'NO_PERMISSION' || filteringContext.reason === 'RBAC_BLOCKED_USER_PROFILES' || filteringContext.reason === 'RBAC_BLOCKED_ALL') {
         reasonCode = 'permission_denied';
+      } else if (filteringContext.reason === 'PARTIAL_RBAC_BLOCK') {
+        reasonCode = 'partial_permission_denied';
       } else if (filteringContext.reason === 'LOW_SIMILARITY') {
         reasonCode = 'below_threshold';
       } else if (filteringContext.reason === 'NO_DATA') {
