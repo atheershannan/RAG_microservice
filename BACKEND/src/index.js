@@ -11,6 +11,7 @@ import queryRoutes from './routes/query.routes.js';
 import microserviceSupportRoutes from './routes/microserviceSupport.routes.js';
 import recommendationsRoutes from './routes/recommendations.routes.js';
 import knowledgeGraphRoutes from './routes/knowledgeGraph.routes.js';
+import diagnosticsRoutes from './routes/diagnostics.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -67,6 +68,7 @@ app.use('/api/v1', queryRoutes);
 app.use('/api/v1', recommendationsRoutes);
 app.use('/api/v1', knowledgeGraphRoutes);
 app.use('/api', microserviceSupportRoutes);
+app.use('/api/debug', diagnosticsRoutes);
 
 // Error handling
 app.use(notFoundHandler);
@@ -81,6 +83,8 @@ app.listen(PORT, () => {
   logger.info(`DevLab support: http://localhost:${PORT}/api/devlab/support`);
   logger.info(`Recommendations: http://localhost:${PORT}/api/v1/personalized/recommendations/:userId`);
   logger.info(`Skill progress: http://localhost:${PORT}/api/v1/knowledge/progress/user/:userId/skill/:skillId?tenant_id=dev.educore.local`);
+  logger.info(`Diagnostics: http://localhost:${PORT}/api/debug/embeddings-status`);
+  logger.info(`Vector search test: http://localhost:${PORT}/api/debug/test-vector-search?query=test`);
   logger.info(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
 });
 

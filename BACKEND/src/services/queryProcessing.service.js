@@ -56,10 +56,26 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
     const tenant = await getOrCreateTenant(tenantDomain);
     const actualTenantId = tenant.id;
     
+    // Verify tenant has embeddings (for diagnostic purposes)
+    let tenantEmbeddingCount = 0;
+    try {
+      const prisma = await getPrismaClient();
+      const countResult = await prisma.$queryRaw`
+        SELECT COUNT(*)::int as count FROM vector_embeddings WHERE tenant_id = ${actualTenantId}
+      `.catch(() => [{ count: 0 }]);
+      tenantEmbeddingCount = countResult[0]?.count || 0;
+    } catch (error) {
+      logger.debug('Could not check tenant embedding count', { error: error.message });
+    }
+    
     logger.info('Tenant resolved', {
       tenant_domain: tenantDomain,
       tenant_id: actualTenantId,
       requested_tenant_id: tenant_id,
+      embeddings_count: tenantEmbeddingCount,
+      recommendation: tenantEmbeddingCount === 0 
+        ? 'No embeddings found for this tenant. Run embeddings script or check tenant_id.' 
+        : `${tenantEmbeddingCount} embeddings available for this tenant.`,
     });
 
     // Get or create user profile
@@ -232,10 +248,14 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       
       logger.info('Vector search returned', {
         tenant_id: actualTenantId,
+        tenant_domain: tenantDomain,
         vectors_found: similarVectors.length,
         content_types: similarVectors.map(v => v.contentType),
         content_ids: similarVectors.map(v => v.contentId),
         top_similarities: similarVectors.slice(0, 3).map(v => v.similarity),
+        threshold_used: min_confidence,
+        query_for_embedding: queryForEmbedding.substring(0, 100),
+        embedding_dimensions: queryEmbedding.length,
       });
 
       // Enforce role-based permission on user profiles:
@@ -331,19 +351,27 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
 
       logger.info('RAG vector search completed', {
         tenant_id: actualTenantId,
+        tenant_domain: tenantDomain,
         user_id,
         category,
         sources_count: sources.length,
         avg_confidence: sources.length ? confidence : 0,
         similar_vectors_count: similarVectors.length,
+        threshold_used: min_confidence,
+        query_preview: query.substring(0, 100),
       });
 
       // If no results found, try with lower threshold as fallback
       if (sources.length === 0) {
-        logger.info('No results with default threshold (0.5), trying with lower threshold (0.2)', {
+        logger.warn('No results with default threshold, trying with lower threshold', {
           tenant_id: actualTenantId,
+          tenant_domain: tenantDomain,
+          default_threshold: min_confidence,
           similar_vectors_found: similarVectors.length,
           query_for_embedding: queryForEmbedding.substring(0, 100),
+          original_query: query.substring(0, 100),
+          translated_query: translatedQuery?.substring(0, 100),
+          embedding_dimensions: queryEmbedding.length,
         });
         try {
           const lowThresholdVectors = await searchSimilarVectors(queryEmbedding, actualTenantId, {
@@ -441,10 +469,14 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
               });
             }
           } else {
-            logger.warn('No results even with lower threshold (0.2)', {
+            logger.warn('No results even with lower threshold', {
               tenant_id: actualTenantId,
+              tenant_domain: tenantDomain,
+              threshold_tried: 0.2,
               query_for_embedding: queryForEmbedding.substring(0, 100),
+              original_query: query.substring(0, 100),
               embedding_dimensions: queryEmbedding.length,
+              recommendation: 'Check if embeddings exist for this tenant. Use /api/debug/embeddings-status to verify.',
             });
             
             // Last resort: try with very low threshold (0.1) ONLY for specific user queries
