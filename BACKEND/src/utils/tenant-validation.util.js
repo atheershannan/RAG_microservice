@@ -113,7 +113,6 @@ export function logTenantAtEntryPoint(req, finalTenantId) {
     FINAL: finalTenantId,
   };
 
-  logger.info('🔍 TENANT DEBUG - Entry Point', debugInfo);
 
   // CRITICAL: Throw error if wrong tenant detected
   if (finalTenantId === WRONG_TENANT_ID) {
