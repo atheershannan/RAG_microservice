@@ -45,36 +45,25 @@ export async function unifiedVectorSearch(
     const escapedEmbeddingStr = embeddingStr.replace(/'/g, "''");
     const vectorLiteral = `'${escapedEmbeddingStr}'::vector`;
     
-    // Build WHERE clause with parameterized queries
-    let whereClause = 'tenant_id = $1';
-    const params = [tenantId];
-    let paramIndex = 2;
+    // Build WHERE clause with proper SQL parameterization for $queryRawUnsafe
+    // NOTE: $queryRawUnsafe uses string interpolation, so we need to escape values properly
+    const escapedTenantId = tenantId.replace(/'/g, "''");
+    let whereClause = `tenant_id = '${escapedTenantId}'::uuid`;
 
     if (contentType) {
-      whereClause += ` AND content_type = $${paramIndex}`;
-      params.push(contentType);
-      paramIndex++;
+      const escapedContentType = String(contentType).replace(/'/g, "''");
+      whereClause += ` AND content_type = '${escapedContentType}'`;
     }
 
     if (contentId) {
-      whereClause += ` AND content_id = $${paramIndex}`;
-      params.push(contentId);
-      paramIndex++;
+      const escapedContentId = String(contentId).replace(/'/g, "''");
+      whereClause += ` AND content_id = '${escapedContentId}'`;
     }
 
     if (microserviceId) {
-      whereClause += ` AND microservice_id = $${paramIndex}`;
-      params.push(microserviceId);
-      paramIndex++;
+      const escapedMicroserviceId = String(microserviceId).replace(/'/g, "''");
+      whereClause += ` AND microservice_id = '${escapedMicroserviceId}'`;
     }
-
-    // Add threshold and limit as parameters
-    const thresholdParamIndex = paramIndex;
-    params.push(threshold);
-    paramIndex++;
-    
-    const limitParamIndex = paramIndex;
-    params.push(limit);
 
     // Build the complete query - EXACT same structure as vectorSearch.service.js
     const query = `
@@ -91,14 +80,29 @@ export async function unifiedVectorSearch(
         1 - (embedding <=> ${vectorLiteral}) as similarity
       FROM vector_embeddings
       WHERE ${whereClause}
-        AND (1 - (embedding <=> ${vectorLiteral})) >= $${thresholdParamIndex}
+        AND (1 - (embedding <=> ${vectorLiteral})) >= ${threshold}
       ORDER BY embedding <=> ${vectorLiteral}
-      LIMIT $${limitParamIndex}
+      LIMIT ${limit}
     `;
 
-    // Execute query
-    const results = await prisma.$queryRawUnsafe(query, ...params);
+    // Execute query - $queryRawUnsafe uses string interpolation, not parameterized queries
+    logger.debug('Executing vector search query', {
+      tenantId,
+      threshold,
+      limit,
+      contentType,
+      contentId,
+      microserviceId,
+      queryPreview: query.substring(0, 200),
+    });
+    
+    const results = await prisma.$queryRawUnsafe(query);
 
+    logger.debug('Vector search query executed', {
+      tenantId,
+      resultsCount: results?.length || 0,
+      threshold,
+    });
 
     // Map results to consistent format
     return results.map((row) => ({
