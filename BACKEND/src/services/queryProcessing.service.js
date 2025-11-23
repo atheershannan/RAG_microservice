@@ -486,7 +486,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       const isAuthenticated = user_id && user_id !== 'anonymous' && user_id !== 'guest';
       const isAdmin = userRole === 'admin' || userRole === 'administrator';
       const isManager = userRole === 'manager';
-      const isEmployee = userRole === 'employee' || userRole === 'user';
+      const isEmployee = userRole === 'employee' || userRole === 'user' || userRole === 'learner';
       const isTrainer = userRole === 'trainer' || userRole === 'TRAINER';
       const isHR = userRole === 'hr' || userRole === 'HR' || userRole === 'human_resources';
       
@@ -541,7 +541,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
        *    - Can view profiles of team members
        *    - Cannot browse all users
        * 
-       * 5. EMPLOYEE/USER:
+       * 5. EMPLOYEE/USER/LEARNER:
        *    - Can ONLY access their OWN profile
        *    - Cannot view other employees' profiles
        * 
