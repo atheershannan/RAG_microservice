@@ -19,7 +19,7 @@ function buildMockApp() {
           input,
         },
       ],
-      model: 'text-embedding-3-small',
+      model: 'text-embedding-ada-002',
       usage: {
         prompt_tokens: input.length,
         total_tokens: input.length,

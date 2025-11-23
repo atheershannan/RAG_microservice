@@ -167,16 +167,15 @@ async function createEmbedding(text) {
     logger.info('Creating OpenAI embedding', { textLength: text.length });
     
     const response = await openai.embeddings.create({
-      model: 'text-embedding-3-small',
+      model: 'text-embedding-ada-002',
       input: text,
-      dimensions: 1536, // Maintain compatibility with existing vector(1536) schema
     });
 
     const embedding = response.data[0].embedding;
     
     logger.info('Embedding created', { 
       dimensions: embedding.length,
-      model: 'text-embedding-3-small',
+      model: 'text-embedding-ada-002',
     });
 
     return embedding;

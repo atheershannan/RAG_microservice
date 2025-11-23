@@ -365,9 +365,8 @@ export async function testVectorSearch(req, res, next) {
 
     // Create embedding for test query
     const embeddingResponse = await openai.embeddings.create({
-      model: 'text-embedding-3-small',
+      model: 'text-embedding-ada-002',
       input: testQuery,
-      dimensions: 1536, // Maintain compatibility with existing vector(1536) schema
     });
     const queryEmbedding = embeddingResponse.data[0].embedding;
 
