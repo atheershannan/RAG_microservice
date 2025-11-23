@@ -5,6 +5,9 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
 import { errorHandler, notFoundHandler } from './middleware/error-handler.middleware.js';
 import { logger } from './utils/logger.util.js';
 import queryRoutes from './routes/query.routes.js';
@@ -12,6 +15,12 @@ import microserviceSupportRoutes from './routes/microserviceSupport.routes.js';
 import recommendationsRoutes from './routes/recommendations.routes.js';
 import knowledgeGraphRoutes from './routes/knowledgeGraph.routes.js';
 import diagnosticsRoutes from './routes/diagnostics.routes.js';
+
+// Get directory paths for serving static files
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, '../..');
+const frontendDistPath = path.join(rootDir, 'FRONTEND', 'dist');
 
 // Load environment variables
 dotenv.config();
@@ -63,6 +72,37 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'rag-microservice' });
 });
 
+// Serve embed files (bot.js and bot-bundle.js) for widget integration
+// This allows the widget to be embedded in other microservices
+const embedPath = path.join(frontendDistPath, 'embed');
+if (existsSync(embedPath)) {
+  app.use('/embed', express.static(embedPath, {
+    setHeaders: (res, filePath) => {
+      // Set proper MIME types
+      if (filePath.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      }
+      // Enable CORS for embed files
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    },
+  }));
+  logger.info('✅ Embed files serving enabled from:', embedPath);
+} else {
+  logger.warn('⚠️  Embed files directory not found:', embedPath);
+  logger.warn('   Make sure to build the frontend: cd FRONTEND && npm run build');
+  // Add a helpful 404 handler for embed routes
+  app.use('/embed', (req, res) => {
+    res.status(404).json({
+      error: {
+        message: 'Embed files not found. Please build the frontend first.',
+        statusCode: 404,
+        hint: 'Run: cd FRONTEND && npm run build',
+      },
+    });
+  });
+}
+
 // API Routes
 app.use('/api/v1', queryRoutes);
 app.use('/api/v1', recommendationsRoutes);
@@ -85,6 +125,8 @@ app.listen(PORT, () => {
   logger.info(`Skill progress: http://localhost:${PORT}/api/v1/knowledge/progress/user/:userId/skill/:skillId?tenant_id=dev.educore.local`);
   logger.info(`Diagnostics: http://localhost:${PORT}/api/debug/embeddings-status`);
   logger.info(`Vector search test: http://localhost:${PORT}/api/debug/test-vector-search?query=test`);
+  logger.info(`Embed widget: http://localhost:${PORT}/embed/bot.js`);
+  logger.info(`Embed bundle: http://localhost:${PORT}/embed/bot-bundle.js`);
   logger.info(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
 });
 
