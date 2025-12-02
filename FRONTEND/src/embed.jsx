@@ -47,6 +47,7 @@ window.EDUCORE_BOT_INIT_REACT = function(options) {
             initialMode={supportMode}
             userId={config.userId}
             token={config.token}
+            tenantId={config.tenantId}
           />
         </ThemeProvider>
       </Provider>

@@ -126,3 +126,5 @@ After deployment, check:
 - `FRONTEND/vite.config.js` - Build configuration for embed files
 - `FRONTEND/src/embed.jsx` - React component for the widget
 
+
+

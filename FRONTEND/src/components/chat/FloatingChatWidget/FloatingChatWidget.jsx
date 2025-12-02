@@ -17,6 +17,7 @@ import { detectModeChange, getModeSpecificResponse } from '../../../utils/modeDe
 import { getModeSpecificRecommendations } from '../../../utils/recommendations.js';
 import { proxyToMicroservice } from '../../../services/microserviceProxy.js';
 import { useSubmitQueryMutation, useGetRecommendationsQuery } from '../../../store/api/ragApi.js';
+import { useAuth } from '../../../hooks/useAuth.js';
 import ChatWidgetButton from '../../chatbot/ChatWidgetButton/ChatWidgetButton.jsx';
 import ChatPanel from '../../chatbot/ChatPanel/ChatPanel.jsx';
 
@@ -24,7 +25,8 @@ const FloatingChatWidget = ({
   embedded = false, 
   initialMode = null, 
   userId = null, 
-  token = null 
+  token = null,
+  tenantId = null
 } = {}) => {
   const dispatch = useDispatch();
   const isOpen = useSelector((state) => state.ui.isWidgetOpen);
@@ -32,13 +34,29 @@ const FloatingChatWidget = ({
   const isLoading = useSelector((state) => state.chat.isLoading);
   const currentMode = useSelector((state) => state.chatMode.currentMode);
   
+  // Load user context using useAuth hook
+  const { loadUserContext } = useAuth({
+    props: { userId, token, tenantId },
+    autoLoad: false, // We'll handle loading manually to support prop changes
+  });
+  
+  // Get user context from Redux (with fallback to anonymous)
+  const authUserId = useSelector((state) => state.auth.userId);
+  const authTenantId = useSelector((state) => state.auth.tenantId);
+  
+  // Load user context on mount and when props change
+  useEffect(() => {
+    loadUserContext({ userId, token, tenantId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, token, tenantId]); // Reload when identity props change
+  
   const [recommendations, setRecommendations] = useState([]);
   const [hasShownGreeting, setHasShownGreeting] = useState(false);
   const [submitQuery, { isLoading: isQueryLoading }] = useSubmitQueryMutation();
   
-  // Get current user ID for recommendations
-  const currentUserId = userId || localStorage.getItem('user_id') || 'anonymous';
-  const currentTenantId = localStorage.getItem('tenant_id') || 'default';
+  // Get current user ID for recommendations (Redux with fallback to props, then anonymous)
+  const currentUserId = authUserId || userId || 'anonymous';
+  const currentTenantId = authTenantId || tenantId || 'default';
   
   // Fetch recommendations from backend API
   const modeParam = currentMode === MODES.ASSESSMENT_SUPPORT ? 'assessment' 
@@ -267,9 +285,9 @@ const FloatingChatWidget = ({
           
           const ragResponse = await submitQuery({ 
             query: text,
-            tenant_id: localStorage.getItem('tenant_id') || 'default',
+            tenant_id: currentTenantId,
             context: {
-              user_id: userId || localStorage.getItem('user_id') || 'anonymous',
+              user_id: currentUserId,
               session_id: sessionId,
             },
             options: {

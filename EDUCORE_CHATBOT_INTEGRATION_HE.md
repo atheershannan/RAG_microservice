@@ -316,3 +316,5 @@ window.initializeEducoreBot
 
 אם תרצי — אכין לך **גרסת PDF מוכנה להורדה**, או גרסה בפורמט **Notion**, או אפילו **קובץ README.md** לשים בגיטהאב.
 
+
+

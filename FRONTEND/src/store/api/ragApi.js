@@ -11,10 +11,23 @@ export const ragApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl,
     prepareHeaders: (headers, { getState }) => {
-      const token = getState().auth.token;
+      const state = getState();
+      const { token, userId, tenantId } = state.auth;
+      
+      // Add Authorization header
       if (token) {
         headers.set('authorization', `Bearer ${token}`);
       }
+      
+      // Add user identity headers
+      if (userId) {
+        headers.set('X-User-Id', userId);
+      }
+      
+      if (tenantId) {
+        headers.set('X-Tenant-Id', tenantId);
+      }
+      
       return headers;
     },
   }),

@@ -66,3 +66,5 @@ curl https://ragmicroservice-production.up.railway.app/
 - ✅ Better error messages for debugging
 - ✅ API discovery endpoint for users
 
+
+

@@ -362,3 +362,5 @@ if (!available) {
 3. Review error handling in `coordinator.client.js` for specific error codes
 
 
+
+

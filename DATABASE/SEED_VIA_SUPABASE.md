@@ -1,30 +1,56 @@
-# איך למלא את הטבלאות דרך Supabase SQL Editor
+# איך למלא את הטבלאות (Seed Database)
 
-## הבעיה:
-אין טרמינל ב-Railway, אז צריך להריץ את ה-seed דרך Supabase SQL Editor.
+## ⚠️ חשוב:
+**הקובץ `seed.sql` הוסר** - הוא לא הכיל את כל הנתונים (חסרו vector embeddings והמשתמשים Eden Levi, Adi Cohen, Noa Bar).
+
+**השתמש ב-`seed.js` במקום** - זה הקובץ המלא והמעודכן.
 
 ---
 
-## פתרון מהיר:
+## פתרון מומלץ: הרצת seed.js
 
-### שלב 1: לך ל-Supabase SQL Editor
-1. פתח https://supabase.com/dashboard
-2. בחר את הפרויקט שלך
-3. לחץ על **"SQL Editor"** בתפריט השמאלי
+### דרך 1: דרך npm script (מומלץ)
+```bash
+npm run db:seed
+```
 
-### שלב 2: העתק והדבק את ה-SQL
-1. פתח את הקובץ: `DATABASE/prisma/seed.sql`
-2. העתק את כל התוכן
-3. הדבק ב-Supabase SQL Editor
-4. לחץ **"Run"** (או Ctrl+Enter)
+### דרך 2: דרך Prisma CLI
+```bash
+npx prisma db seed
+```
 
-### שלב 3: בדוק שהכל עבד
-ב-Supabase SQL Editor, הרץ:
+### דרך 3: ישירות
+```bash
+node DATABASE/prisma/seed.js
+```
+
+**כל האפשרויות מריצות את `seed.js`** - הקובץ המלא עם כל הנתונים.
+
+---
+
+## מה seed.js עושה:
+
+1. ✅ יוצר tenant (אם לא קיים)
+2. ✅ יוצר 10 מיקרוסרוויסים
+3. ✅ יוצר access control rules
+4. ✅ יוצר user profiles (כולל Eden Levi, Adi Cohen, Noa Bar)
+5. ✅ יוצר knowledge graph nodes & edges
+6. ✅ יוצר **9 vector embeddings** (guides, assessments, courses, user profiles)
+7. ✅ יוצר sample query עם sources
+8. ✅ מציג סיכום בסוף
+
+---
+
+## בדיקה שהכל עבד:
+
+לאחר הרצת seed.js, בדוק ב-Supabase SQL Editor:
 ```sql
 SELECT 
     'microservices' as table_name, COUNT(*) as count FROM microservices
 UNION ALL
 SELECT 'user_profiles', COUNT(*) FROM user_profiles
+UNION ALL
+SELECT 'vector_embeddings', COUNT(*) FROM vector_embeddings
 UNION ALL
 SELECT 'queries', COUNT(*) FROM queries;
 ```
@@ -34,29 +60,19 @@ SELECT 'queries', COUNT(*) FROM queries;
 table_name        | count
 ------------------+-------
 microservices     | 10
-user_profiles     | 2
+user_profiles     | 5 (learner-001, trainer-001, admin-001, manager-001, employee-001)
+vector_embeddings | 9
 queries           | 1
 ```
 
 ---
 
-## מה ה-SQL Script עושה:
-
-1. ✅ יוצר tenant (אם לא קיים)
-2. ✅ יוצר 10 מיקרוסרוויסים
-3. ✅ יוצר access control rules
-4. ✅ יוצר user profiles
-5. ✅ יוצר knowledge graph nodes & edges
-6. ✅ יוצר sample query עם sources
-7. ✅ מציג סיכום בסוף
-
----
-
 ## הערות חשובות:
 
-- ה-Script משתמש ב-`ON CONFLICT DO NOTHING` - אפשר להריץ כמה פעמים
-- ה-Script יוצר tenant עם domain `dev.educore.local`
-- אם כבר יש נתונים, הם לא יוחלפו
+- seed.js משתמש ב-`upsert` - אפשר להריץ כמה פעמים
+- seed.js יוצר tenant עם domain `dev.educore.local`
+- אם כבר יש נתונים, הם לא יוחלפו (upsert)
+- **חשוב:** seed.js יוצר vector embeddings - ודא ש-pgvector מופעל ב-Supabase
 
 ---
 
@@ -94,10 +110,19 @@ FROM queries;
 
 ## סיכום:
 
-1. לך ל-Supabase SQL Editor
-2. העתק את `DATABASE/prisma/seed.sql`
-3. הדבק והרץ
-4. בדוק את התוצאות
+1. הרץ `npm run db:seed` (או `npx prisma db seed`)
+2. בדוק את התוצאות ב-Supabase
+3. ודא ש-vector embeddings נוצרו (9 embeddings)
 
 **זה הכל!** 🎯
+
+---
+
+## אם אין לך גישה ל-Node.js:
+
+אם אתה צריך להריץ seed בלי Node.js (למשל ב-Railway ללא טרמינל), יש כמה אפשרויות:
+
+1. **השתמש ב-Railway CLI** או **GitHub Actions** להרצת seed.js
+2. **הרץ seed.js מקומית** והנתונים יגיעו ל-Supabase דרך ה-connection string
+3. **צור script חדש** שמכיל את כל הנתונים ב-SQL (אבל זה מסובך כי vector embeddings דורשים embeddings אמיתיים)
 

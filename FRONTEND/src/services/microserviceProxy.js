@@ -30,20 +30,17 @@ export const forwardToAssessmentMicroservice = async (userMessage) => {
   const timestamp = new Date().toISOString();
 
   try {
-    // Prepare request with metadata
+    // Prepare request payload
+    // Note: User identity (userId, tenantId, token) is automatically added via headers by api.js interceptor
     const requestPayload = {
       query: userMessage,
       timestamp,
       session_id: sessionId,
       support_mode: 'Assessment',
-      metadata: {
-        user_id: localStorage.getItem('user_id') || 'anonymous',
-        tenant_id: localStorage.getItem('tenant_id') || 'default',
-      },
     };
 
     // Forward to Assessment microservice
-    // Note: Update endpoint URL based on your actual Assessment microservice API
+    // Note: Headers (Authorization, X-User-Id, X-Tenant-Id) are added automatically by api.js interceptor
     const response = await api.post('/api/assessment/support', requestPayload);
 
     // Return response verbatim (exact text from microservice)
@@ -79,20 +76,17 @@ export const forwardToDevLabMicroservice = async (userMessage) => {
   const timestamp = new Date().toISOString();
 
   try {
-    // Prepare request with metadata
+    // Prepare request payload
+    // Note: User identity (userId, tenantId, token) is automatically added via headers by api.js interceptor
     const requestPayload = {
       query: userMessage,
       timestamp,
       session_id: sessionId,
       support_mode: 'DevLab',
-      metadata: {
-        user_id: localStorage.getItem('user_id') || 'anonymous',
-        tenant_id: localStorage.getItem('tenant_id') || 'default',
-      },
     };
 
     // Forward to DevLab microservice
-    // Note: Update endpoint URL based on your actual DevLab microservice API
+    // Note: Headers (Authorization, X-User-Id, X-Tenant-Id) are added automatically by api.js interceptor
     const response = await api.post('/api/devlab/support', requestPayload);
 
     // Return response verbatim (exact text from microservice)

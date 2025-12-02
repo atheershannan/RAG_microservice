@@ -186,3 +186,5 @@ WITH CHECK (false);
 
 **אחרי זה, ה-RLS policies יעבדו בצורה מאובטחת יותר!** 🔒
 
+
+
