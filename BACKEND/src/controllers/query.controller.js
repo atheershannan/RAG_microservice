@@ -11,11 +11,23 @@ import { validateAndFixTenantId, logTenantAtEntryPoint } from '../utils/tenant-v
 import Joi from 'joi';
 
 /**
+ * Generate a unique conversation ID
+ * Format: conv-{timestamp}-{random}
+ * @returns {string} Unique conversation identifier
+ */
+function generateConversationId() {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 8);
+  return `conv-${timestamp}-${random}`;
+}
+
+/**
  * Query request validation schema
  */
 const queryRequestSchema = Joi.object({
   query: schemas.query,
   tenant_id: Joi.string().min(1).default('default'),
+  conversation_id: Joi.string().optional(), // Optional conversation identifier for multi-turn conversations
   context: Joi.object({
     user_id: schemas.userId,
     session_id: schemas.sessionId,
@@ -98,7 +110,7 @@ export async function submitQuery(req, res, next) {
       });
     }
 
-    const { query, tenant_id, context = {}, options = {} } = validation.value;
+    const { query, tenant_id, conversation_id, context = {}, options = {} } = validation.value;
 
     // CRITICAL: Validate and fix tenant_id at entry point
     // This ensures we never use the wrong tenant ID
@@ -121,11 +133,27 @@ export async function submitQuery(req, res, next) {
     // Extract user role from headers or context
     const user_role = context.role || req.headers['x-user-role'] || req.user?.role || null;
 
+    // Generate conversation_id if not provided
+    const finalConversationId = conversation_id || generateConversationId();
+    
+    if (!conversation_id) {
+      logger.info('Generated new conversation_id', {
+        conversation_id: finalConversationId,
+        user_id,
+      });
+    } else {
+      logger.info('Using provided conversation_id', {
+        conversation_id: finalConversationId,
+        user_id,
+      });
+    }
+
     // Process the query
     logger.info('Routing to normal chatbot flow (no support-mode signal found)', {
       headerSource,
       metaSource,
       supportModeFlag,
+      conversation_id: finalConversationId,
     });
     const result = await processQuery({
       query,
@@ -137,6 +165,7 @@ export async function submitQuery(req, res, next) {
         role: user_role, // Pass role through context
       },
       options,
+      conversation_id: finalConversationId, // Pass conversation_id to processQuery
     });
 
     // Return response - ensure it's JSON serializable

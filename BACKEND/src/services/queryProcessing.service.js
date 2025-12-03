@@ -24,6 +24,7 @@ import {
   expandResultsWithKG
 } from './knowledgeGraph.service.js';
 import { KG_CONFIG } from '../config/knowledgeGraph.config.js';
+import { addMessageToConversation, getConversationHistory } from './conversationCache.service.js';
 
 /**
  * Generate a context-aware "no data" message based on filtering context
@@ -119,9 +120,10 @@ function generateNoResultsMessage(userQuery, filteringContext) {
  * @param {string} params.tenant_id - Tenant identifier
  * @param {Object} params.context - Query context (user_id, session_id)
  * @param {Object} params.options - Query options (max_results, min_confidence, include_metadata)
- * @returns {Promise<Object>} Query response with answer, sources, confidence, metadata
+ * @param {string} params.conversation_id - Optional conversation identifier for multi-turn conversations
+ * @returns {Promise<Object>} Query response with answer, sources, confidence, metadata, conversation_id
  */
-export async function processQuery({ query, tenant_id, context = {}, options = {} }) {
+export async function processQuery({ query, tenant_id, context = {}, options = {}, conversation_id = null }) {
   const startTime = Date.now();
   const { user_id, session_id } = context;
   const {
@@ -291,12 +293,32 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       logger.info('Routing query to general OpenAI (non-EDUCORE)', {
         tenant_id: actualTenantId,
         user_id,
+        conversation_id,
       });
+
+      // Load conversation history if conversation_id is provided
+      let conversationHistory = [];
+      if (conversation_id) {
+        try {
+          conversationHistory = await getConversationHistory(conversation_id, 10);
+          logger.info('Loaded conversation history for non-EDUCORE query', {
+            conversation_id,
+            historyCount: conversationHistory.length,
+          });
+        } catch (historyError) {
+          logger.warn('Failed to load conversation history, continuing without it', {
+            error: historyError.message,
+            conversation_id,
+          });
+          conversationHistory = [];
+        }
+      }
 
       const completion = await openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [
           { role: 'system', content: 'You are a friendly assistant. Provide a concise, helpful answer.' },
+          ...conversationHistory, // Include conversation history
           { role: 'user', content: query },
         ],
         temperature: 0.7,
@@ -307,11 +329,28 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       const answer = formatBotResponse(rawAnswer, { mode: 'general_openai' });
       const processingTimeMs = Date.now() - startTime;
 
+      // Save messages to conversation history if conversation_id is provided
+      if (conversation_id) {
+        try {
+          await addMessageToConversation(conversation_id, 'user', query);
+          await addMessageToConversation(conversation_id, 'assistant', answer);
+          logger.info('Saved messages to conversation history (non-EDUCORE)', {
+            conversation_id,
+          });
+        } catch (saveError) {
+          logger.warn('Failed to save conversation history, continuing without it', {
+            error: saveError.message,
+            conversation_id,
+          });
+        }
+      }
+
       return {
         answer,
         abstained: false,
         confidence: 1,
         sources: [],
+        conversation_id,
         metadata: {
           processing_time_ms: processingTimeMs,
           sources_retrieved: 0,
@@ -319,6 +358,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
           model_version: 'gpt-3.5-turbo',
           personalized: !!userProfile,
           mode: 'general_openai',
+          conversation_enabled: !!conversation_id,
         },
       };
     }
@@ -1221,6 +1261,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         reason: 'permission_denied',
         confidence: 0,
         sources: [],
+        conversation_id,
         metadata: {
           processing_time_ms: Number(processingTimeMs) || 0,
           sources_retrieved: 0,
@@ -1231,6 +1272,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
           userProfilesBlocked: filteringContext.userProfilesRemoved,
           hasSpecificUserName: filteringContext.hasSpecificUserName,
           matchedName: filteringContext.matchedName,
+          conversation_enabled: !!conversation_id,
         },
       };
       
@@ -1294,6 +1336,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         reason: String(reasonCode || 'no_edudata_context'),
         confidence: 0,
         sources: [],
+        conversation_id,
         metadata: {
           processing_time_ms: Number(processingTimeMs) || 0,
           sources_retrieved: 0,
@@ -1303,6 +1346,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
           filtering_reason: filteringContext.reason ? String(filteringContext.reason) : null,
           vectors_before_rbac: Number(filteringContext.vectorResultsFound) || 0,
           vectors_after_rbac: Number(filteringContext.afterRBAC) || 0,
+          conversation_enabled: !!conversation_id,
         },
       };
       
@@ -1322,12 +1366,14 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
           reason: 'no_edudata_context',
           confidence: 0,
           sources: [],
+          conversation_id,
           metadata: {
             processing_time_ms: processingTimeMs,
             sources_retrieved: 0,
             cached: false,
             model_version: 'db-required',
             personalized: false,
+            conversation_enabled: !!conversation_id,
           },
         };
       }
@@ -1392,6 +1438,24 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       }
     }
 
+    // Load conversation history if conversation_id is provided
+    let conversationHistory = [];
+    if (conversation_id) {
+      try {
+        conversationHistory = await getConversationHistory(conversation_id, 10);
+        logger.info('Loaded conversation history for EDUCORE query', {
+          conversation_id,
+          historyCount: conversationHistory.length,
+        });
+      } catch (historyError) {
+        logger.warn('Failed to load conversation history, continuing without it', {
+          error: historyError.message,
+          conversation_id,
+        });
+        conversationHistory = [];
+      }
+    }
+
     // Generate answer using OpenAI with retrieved context (STRICT RAG)
     const systemPrompt = `You are a helpful AI assistant for the EDUCORE learning platform.
 Strict RAG rules you MUST follow:
@@ -1409,6 +1473,7 @@ ${personalizationContext ? `\nPersonalization hints: ${personalizationContext}` 
           role: 'system',
           content: systemPrompt,
         },
+        ...conversationHistory, // Include conversation history
         {
           role: 'user',
           content: userPrompt,
@@ -1425,6 +1490,22 @@ ${personalizationContext ? `\nPersonalization hints: ${personalizationContext}` 
       sources: sources.length 
     });
     const processingTimeMs = Date.now() - startTime;
+
+    // Save messages to conversation history if conversation_id is provided
+    if (conversation_id) {
+      try {
+        await addMessageToConversation(conversation_id, 'user', query);
+        await addMessageToConversation(conversation_id, 'assistant', answer);
+        logger.info('Saved messages to conversation history (EDUCORE)', {
+          conversation_id,
+        });
+      } catch (saveError) {
+        logger.warn('Failed to save conversation history, continuing without it', {
+          error: saveError.message,
+          conversation_id,
+        });
+      }
+    }
 
     // Generate personalized recommendations based on user profile and query context
     let recommendations = [];
@@ -1456,6 +1537,7 @@ ${personalizationContext ? `\nPersonalization hints: ${personalizationContext}` 
       confidence,
       sources,
       recommendations, // Include recommendations in response
+      conversation_id,
       metadata: {
         processing_time_ms: processingTimeMs,
         sources_retrieved: sources.length,
@@ -1465,7 +1547,8 @@ ${personalizationContext ? `\nPersonalization hints: ${personalizationContext}` 
         kg_enhanced: (kgRelations?.length || 0) > 0,
         kg_relations_count: kgRelations?.length || 0,
         user_personalized: !!userLearningContext,
-        boost_applied: similarVectors?.some(v => v.kgBoost > 0) || false
+        boost_applied: similarVectors?.some(v => v.kgBoost > 0) || false,
+        conversation_enabled: !!conversation_id,
       },
     };
 
