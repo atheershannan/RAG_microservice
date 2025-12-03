@@ -29,7 +29,7 @@ export function isEducoreQuery(query) {
     },
     { 
       key: 'courses', 
-      patterns: ['course', 'courses', 'קורס', 'קורסים'] 
+      patterns: ['course', 'courses', 'קורס', 'קורסים', 'prerequisite', 'prerequisites', 'requirements', 'requirement', 'דרישות', 'דרישה', 'קדם', 'קדמים', 'מה צריך לדעת', 'what do i need', 'what should i know'] 
     },
     { 
       key: 'modules', 
@@ -69,6 +69,14 @@ export function isEducoreQuery(query) {
     'organizational data',
     'עדן לוי',  // Eden Levi - specific user name
     'eden levi',  // Eden Levi in English
+    'javascript',  // JavaScript course content
+    'js ',  // JavaScript abbreviation (with space to avoid matching "json")
+    'python',
+    'java ',
+    'react',
+    'node',
+    'html',
+    'css',
   ];
   if (genericEducore.some((p) => q.includes(p))) {
     return { isEducore: true, category: 'general' };
