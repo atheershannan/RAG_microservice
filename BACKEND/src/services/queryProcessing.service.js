@@ -199,6 +199,16 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
     // Get or create user profile
     // Pass context.role if provided to set correct role in profile
     let userProfile = null;
+    
+    // Always prioritize context.role for filteringContext
+    if (context?.role) {
+      filteringContext.userRole = context.role;
+      logger.info('Setting filteringContext.userRole from context.role', {
+        contextRole: context.role,
+        userId: user_id
+      });
+    }
+    
     if (user_id && user_id !== 'anonymous') {
       try {
         const defaultRole = context?.role || undefined; // Use context.role if provided
@@ -208,30 +218,25 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         // Override profile role with context.role if provided (for this request only)
         if (context?.role) {
           userProfile = { ...userProfile, role: context.role };
-          // Update filteringContext with correct role
+          // Ensure filteringContext has correct role
           filteringContext.userRole = context.role;
           logger.info('Using context.role for RBAC check', {
             userId: user_id,
             contextRole: context.role,
             profileRole: userProfile.role
           });
-        } else {
-          // Update filteringContext with profile role
+        } else if (!filteringContext.userRole) {
+          // Update filteringContext with profile role only if context.role not provided
           filteringContext.userRole = userProfile?.role || 'anonymous';
         }
       } catch (profileError) {
         logger.warn('Failed to get user profile, continuing without personalization', {
           error: profileError.message,
         });
-        // Use context.role if profile failed
-        if (context?.role) {
+        // Use context.role if profile failed (already set above if provided)
+        if (!filteringContext.userRole && context?.role) {
           filteringContext.userRole = context.role;
         }
-      }
-    } else {
-      // No user_id, use context.role if provided
-      if (context?.role) {
-        filteringContext.userRole = context.role;
       }
     }
 
@@ -618,7 +623,16 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
       // This allows overriding DB role with explicit header/context role
       const userRoleFromProfile = userProfile?.role;
       const userRoleFromContext = context?.role;
-      const userRole = context?.role || userProfile?.role || 'anonymous';
+      // Use filteringContext.userRole if it was set (from context.role), otherwise fall back
+      const userRole = filteringContext.userRole || context?.role || userProfile?.role || 'anonymous';
+      
+      logger.info('RBAC: User role determination', {
+        contextRole: context?.role,
+        profileRole: userProfile?.role,
+        filteringContextRole: filteringContext.userRole,
+        finalUserRole: userRole,
+        userId: user_id
+      });
       
       
       // 🔐 SECURITY: Check authentication and authorization levels
