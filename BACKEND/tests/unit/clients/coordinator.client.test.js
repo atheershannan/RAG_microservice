@@ -52,7 +52,6 @@ describe('Coordinator Client', () => {
     grpcCall.mockReset();
     createGrpcClient.mockReset();
     createGrpcClient.mockReturnValue(mockClient);
-    createGrpcClient.mockReset = mockCreateGrpcClientFn.mockReset.bind(mockCreateGrpcClientFn);
 
     // Reset environment variables
     delete process.env.COORDINATOR_ENABLED;
