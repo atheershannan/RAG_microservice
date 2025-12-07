@@ -50,15 +50,15 @@ import { logger } from '../../../src/utils/logger.util.js';
 describe('Communication Manager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset all mocks using jest.mocked() to ensure they're recognized as mocks
-    jest.mocked(routeRequest).mockReset();
-    jest.mocked(parseRouteResponse).mockReset();
-    jest.mocked(extractBusinessData).mockReset();
-    jest.mocked(getRoutingSummary).mockReset();
-    jest.mocked(logger.info).mockReset();
-    jest.mocked(logger.warn).mockReset();
-    jest.mocked(logger.error).mockReset();
-    jest.mocked(logger.debug).mockReset();
+    // Mocks are already jest.fn() from factory, reset them directly
+    routeRequest.mockReset();
+    parseRouteResponse.mockReset();
+    extractBusinessData.mockReset();
+    getRoutingSummary.mockReset();
+    logger.info.mockReset();
+    logger.warn.mockReset();
+    logger.error.mockReset();
+    logger.debug.mockReset();
   });
 
   describe('shouldCallCoordinator', () => {
@@ -67,7 +67,7 @@ describe('Communication Manager', () => {
         const result = shouldCallCoordinator('test query', [], {});
 
         expect(result).toBe(true);
-        expect(jest.mocked(logger.info)).toHaveBeenCalledWith(
+        expect(logger.info).toHaveBeenCalledWith(
           'Should call Coordinator: No internal data available',
           expect.any(Object)
         );
@@ -82,7 +82,7 @@ describe('Communication Manager', () => {
         const result = shouldCallCoordinator('test query', vectorResults, {});
 
         expect(result).toBe(false);
-        expect(jest.mocked(logger.debug)).toHaveBeenCalledWith(
+        expect(logger.debug).toHaveBeenCalledWith(
           'Should NOT call Coordinator: High similarity and sufficient sources',
           expect.any(Object)
         );
@@ -97,7 +97,7 @@ describe('Communication Manager', () => {
         const result = shouldCallCoordinator('test query', vectorResults, {});
 
         expect(result).toBe(true);
-        expect(jest.mocked(logger.info)).toHaveBeenCalledWith(
+        expect(logger.info).toHaveBeenCalledWith(
           'Should call Coordinator: Low similarity scores',
           expect.any(Object)
         );
@@ -110,7 +110,7 @@ describe('Communication Manager', () => {
         const result = shouldCallCoordinator('show me current status', vectorResults, {});
 
         expect(result).toBe(true);
-        expect(jest.mocked(logger.info)).toHaveBeenCalledWith(
+        expect(logger.info).toHaveBeenCalledWith(
           'Should call Coordinator: Query requires real-time data',
           expect.any(Object)
         );
@@ -122,7 +122,7 @@ describe('Communication Manager', () => {
         const result = shouldCallCoordinator('show me my test results', vectorResults, {});
 
         expect(result).toBe(true);
-        expect(jest.mocked(logger.info)).toHaveBeenCalledWith(
+        expect(logger.info).toHaveBeenCalledWith(
           'Should call Coordinator: Microservice-specific query with insufficient internal data',
           expect.any(Object)
         );
@@ -146,7 +146,7 @@ describe('Communication Manager', () => {
         const result = shouldCallCoordinator(null, [], {});
 
         expect(result).toBe(false);
-        expect(jest.mocked(logger.error)).toHaveBeenCalled();
+        expect(logger.error).toHaveBeenCalled();
       });
     });
 
@@ -197,7 +197,7 @@ describe('Communication Manager', () => {
         normalized_fields: { successful_service: 'payment-service' },
       };
 
-      jest.mocked(routeRequest).mockResolvedValue(mockResponse);
+      routeRequest.mockResolvedValue(mockResponse);
 
       const result = await callCoordinatorRoute({
         tenant_id: 'org-123',
@@ -225,7 +225,7 @@ describe('Communication Manager', () => {
     });
 
     it('should handle null response', async () => {
-      jest.mocked(routeRequest).mockResolvedValue(null);
+      routeRequest.mockResolvedValue(null);
 
       const result = await callCoordinatorRoute({
         tenant_id: 'org-123',
@@ -242,7 +242,7 @@ describe('Communication Manager', () => {
 
     it('should handle errors gracefully', async () => {
       const error = new Error('Network error');
-      jest.mocked(routeRequest).mockRejectedValue(error);
+      routeRequest.mockRejectedValue(error);
 
       const result = await callCoordinatorRoute({
         tenant_id: 'org-123',
@@ -260,7 +260,7 @@ describe('Communication Manager', () => {
     });
 
     it('should add timestamp and source to metadata', async () => {
-      jest.mocked(routeRequest).mockResolvedValue({});
+      routeRequest.mockResolvedValue({});
 
       await callCoordinatorRoute({
         tenant_id: 'org-123',
@@ -329,9 +329,9 @@ describe('Communication Manager', () => {
       };
 
       beforeEach(() => {
-        jest.mocked(parseRouteResponse).mockReturnValue(mockParsedResponse);
-        jest.mocked(extractBusinessData).mockReturnValue(mockBusinessData);
-        jest.mocked(getRoutingSummary).mockReturnValue(mockRoutingSummary);
+        parseRouteResponse.mockReturnValue(mockParsedResponse);
+        extractBusinessData.mockReturnValue(mockBusinessData);
+        getRoutingSummary.mockReturnValue(mockRoutingSummary);
       });
 
       it('should process successful primary response', () => {
@@ -354,7 +354,7 @@ describe('Communication Manager', () => {
       it('should log routing summary', () => {
         processCoordinatorResponse(mockCoordinatorResponse);
 
-        expect(jest.mocked(logger.info)).toHaveBeenCalledWith(
+        expect(logger.info).toHaveBeenCalledWith(
           'Coordinator response processed',
           expect.objectContaining({
             status: 'success_primary',
@@ -470,7 +470,7 @@ describe('Communication Manager', () => {
       });
 
       it('should return null if parsing fails', () => {
-        jest.mocked(parseRouteResponse).mockReturnValue(null);
+        parseRouteResponse.mockReturnValue(null);
 
         const processed = processCoordinatorResponse({});
 
@@ -481,7 +481,7 @@ describe('Communication Manager', () => {
       });
 
       it('should handle processing errors gracefully', () => {
-        jest.mocked(parseRouteResponse).mockImplementation(() => {
+        parseRouteResponse.mockImplementation(() => {
           throw new Error('Parse error');
         });
 
@@ -522,9 +522,9 @@ describe('Communication Manager', () => {
           message: 'Success',
         };
 
-        jest.mocked(parseRouteResponse).mockReturnValue(mockParsed);
-        jest.mocked(extractBusinessData).mockReturnValue(mockBusinessData);
-        jest.mocked(getRoutingSummary).mockReturnValue(mockSummary);
+        parseRouteResponse.mockReturnValue(mockParsed);
+        extractBusinessData.mockReturnValue(mockBusinessData);
+        getRoutingSummary.mockReturnValue(mockSummary);
 
         const processed = processCoordinatorResponse({});
 
