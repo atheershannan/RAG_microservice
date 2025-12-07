@@ -22,10 +22,11 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg15
         env:
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: test_db
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U postgres"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -49,26 +50,57 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: BACKEND/package-lock.json
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install backend dependencies
+        working-directory: BACKEND
+        run: npm ci
+
+      - name: Generate Prisma Client
+        working-directory: BACKEND
+        run: npm run db:generate
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+
+      - name: Run database migrations
+        working-directory: BACKEND
+        run: npm run db:migrate:deploy
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
 
       - name: Lint service
+        working-directory: BACKEND
         run: npm run lint
 
       - name: Run unit tests
+        working-directory: BACKEND
         env:
           SKIP_GLOBAL_TEST_SETUP: 'true'
-          SKIP_PRISMA: 'true'
+          NODE_ENV: test
+          LOG_LEVEL: error
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+          TEST_DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+          REDIS_URL: ${{ env.TEST_REDIS_URL }}
+          TEST_REDIS_URL: ${{ env.TEST_REDIS_URL }}
+          KAFKA_BROKER_URL: localhost:9092
+          OPENAI_API_KEY: test-key
+          OPENAI_API_URL: http://localhost:8080/mock-openai
         run: npm run test:unit
 
       - name: Run Knowledge Graph tests
         working-directory: BACKEND
         env:
           SKIP_GLOBAL_TEST_SETUP: 'true'
-          SKIP_PRISMA: 'true'
+          NODE_ENV: test
+          LOG_LEVEL: error
           DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+          TEST_DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
           REDIS_URL: ${{ env.TEST_REDIS_URL }}
+          TEST_REDIS_URL: ${{ env.TEST_REDIS_URL }}
+          KAFKA_BROKER_URL: localhost:9092
+          OPENAI_API_KEY: test-key
+          OPENAI_API_URL: http://localhost:8080/mock-openai
         run: npm run test:kg
 
       # Integration tests still require additional Prisma ESM fixes.

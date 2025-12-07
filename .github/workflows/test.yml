@@ -63,16 +63,26 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: BACKEND/package-lock.json
 
-      - name: Install dependencies
+      - name: Install backend dependencies
+        working-directory: BACKEND
         run: npm ci
 
+      - name: Generate Prisma Client
+        working-directory: BACKEND
+        run: npm run db:generate
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/rag_test
+
       - name: Run database migrations
-        run: npx prisma migrate deploy
+        working-directory: BACKEND
+        run: npm run db:migrate:deploy
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/rag_test
 
       - name: Run unit tests
+        working-directory: BACKEND
         run: npm run test:unit
         env:
           NODE_ENV: test
@@ -86,6 +96,7 @@ jobs:
           OPENAI_API_URL: http://localhost:8080/mock-openai
 
       - name: Run integration tests
+        working-directory: BACKEND
         run: npm run test:integration
         env:
           NODE_ENV: test
@@ -99,6 +110,7 @@ jobs:
           OPENAI_API_URL: http://localhost:8080/mock-openai
 
       - name: Generate coverage report
+        working-directory: BACKEND
         run: npm run test:coverage
         env:
           NODE_ENV: test
@@ -115,7 +127,7 @@ jobs:
         if: ${{ success() }}
         uses: codecov/codecov-action@v4
         with:
-          files: ./coverage/lcov.info
+          files: ./BACKEND/coverage/lcov.info
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
