@@ -31,6 +31,10 @@ import { logger } from '../../../src/utils/logger.util.js';
 describe('Coordinator Response Parser', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Reset all mocks using jest.mocked() to ensure they're recognized as mocks
+    jest.mocked(logger.debug).mockReset();
+    jest.mocked(logger.warn).mockReset();
+    jest.mocked(logger.error).mockReset();
   });
 
   describe('parseRouteResponse', () => {
@@ -279,7 +283,7 @@ describe('Coordinator Response Parser', () => {
 
         expect(parsed).toBeDefined();
         expect(parsed.envelope).toBeNull();
-        expect(logger.warn).toHaveBeenCalledWith(
+        expect(jest.mocked(logger.warn)).toHaveBeenCalledWith(
           'Failed to parse envelope_json',
           expect.any(Object)
         );
@@ -296,7 +300,7 @@ describe('Coordinator Response Parser', () => {
 
         expect(parsed).toBeDefined();
         expect(parsed.routing).toBeNull();
-        expect(logger.warn).toHaveBeenCalledWith(
+        expect(jest.mocked(logger.warn)).toHaveBeenCalledWith(
           'Failed to parse routing_metadata',
           expect.any(Object)
         );

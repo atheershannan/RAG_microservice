@@ -4,25 +4,18 @@
  */
 
 // MOCKS MUST BE FIRST - before any imports (Jest hoists these)
-// In factory functions, jest is available as a global (hoisted by Jest)
-jest.mock('../../../src/clients/grpcClient.util.js', () => {
-  // eslint-disable-next-line no-undef
-  return {
-    createGrpcClient: jest.fn(),
-    grpcCall: jest.fn(),
-  };
-});
-jest.mock('../../../src/utils/logger.util.js', () => {
-  // eslint-disable-next-line no-undef
-  return {
-    logger: {
-      info: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn(),
-      debug: jest.fn(),
-    },
-  };
-});
+jest.mock('../../../src/clients/grpcClient.util.js', () => ({
+  createGrpcClient: jest.fn(),
+  grpcCall: jest.fn(),
+}));
+jest.mock('../../../src/utils/logger.util.js', () => ({
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
 
 import { jest } from '@jest/globals';
 
@@ -34,7 +27,6 @@ import * as grpc from '@grpc/grpc-js';
 
 describe('Coordinator Client', () => {
   let mockClient;
-  let mockGrpcCall;
 
   beforeEach(() => {
     // Reset client state
@@ -47,11 +39,15 @@ describe('Coordinator Client', () => {
       close: jest.fn(),
     };
 
-    // grpcCall and createGrpcClient are already jest.fn() from jest.mock() factory
-    // Just reset and set return values
-    grpcCall.mockReset();
-    createGrpcClient.mockReset();
-    createGrpcClient.mockReturnValue(mockClient);
+    // Use jest.mocked() to ensure Jest recognizes these as mocks
+    // Then reset and set up return values
+    jest.mocked(createGrpcClient).mockReset();
+    jest.mocked(grpcCall).mockReset();
+    jest.mocked(createGrpcClient).mockReturnValue(mockClient);
+    jest.mocked(logger.info).mockReset();
+    jest.mocked(logger.warn).mockReset();
+    jest.mocked(logger.error).mockReset();
+    jest.mocked(logger.debug).mockReset();
 
     // Reset environment variables
     delete process.env.COORDINATOR_ENABLED;
@@ -59,9 +55,6 @@ describe('Coordinator Client', () => {
     delete process.env.COORDINATOR_GRPC_PORT;
     delete process.env.COORDINATOR_GRPC_URL;
     delete process.env.GRPC_TIMEOUT;
-
-    // Clear mocks
-    jest.clearAllMocks();
   });
 
   afterEach(() => {
@@ -131,7 +124,7 @@ describe('Coordinator Client', () => {
         query_text: 'test query 1',
       });
 
-      const firstCallCount = createGrpcClient.mock.calls.length;
+      const firstCallCount = jest.mocked(createGrpcClient).mock.calls.length;
 
       // Second call
       await routeRequest({
@@ -141,7 +134,7 @@ describe('Coordinator Client', () => {
       });
 
       // Should not create new client
-      expect(createGrpcClient.mock.calls.length).toBe(firstCallCount);
+      expect(jest.mocked(createGrpcClient).mock.calls.length).toBe(firstCallCount);
     });
 
     it('should not create client if COORDINATOR_ENABLED is false', async () => {
@@ -160,7 +153,7 @@ describe('Coordinator Client', () => {
 
     it('should handle client creation errors gracefully', async () => {
       process.env.COORDINATOR_ENABLED = 'true';
-      createGrpcClient.mockImplementation(() => {
+      jest.mocked(createGrpcClient).mockImplementation(() => {
         throw new Error('Failed to create client');
       });
 
@@ -194,7 +187,7 @@ describe('Coordinator Client', () => {
         },
       };
 
-      mockGrpcCall.mockResolvedValue(mockResponse);
+      jest.mocked(grpcCall).mockResolvedValue(mockResponse);
 
       await routeRequest({
         tenant_id: 'test-tenant-123',
@@ -206,7 +199,7 @@ describe('Coordinator Client', () => {
         },
       });
 
-      expect(mockGrpcCall).toHaveBeenCalledWith(
+      expect(jest.mocked(grpcCall)).toHaveBeenCalledWith(
         mockClient,
         'Route',
         {
@@ -244,7 +237,7 @@ describe('Coordinator Client', () => {
         }),
       };
 
-      mockGrpcCall.mockResolvedValue(mockResponse);
+      jest.mocked(grpcCall).mockResolvedValue(mockResponse);
 
       const response = await routeRequest({
         tenant_id: 'test-tenant',
@@ -273,7 +266,7 @@ describe('Coordinator Client', () => {
         },
       };
 
-      mockGrpcCall.mockResolvedValue(mockResponse);
+      jest.mocked(grpcCall).mockResolvedValue(mockResponse);
 
       await routeRequest({
         tenant_id: 'test-tenant',
@@ -298,7 +291,7 @@ describe('Coordinator Client', () => {
         },
       };
 
-      mockGrpcCall.mockResolvedValue(mockResponse);
+      jest.mocked(grpcCall).mockResolvedValue(mockResponse);
 
       await routeRequest({
         tenant_id: 'test-tenant',
@@ -341,7 +334,7 @@ describe('Coordinator Client', () => {
     });
 
     it('should handle null response gracefully', async () => {
-      mockGrpcCall.mockResolvedValue(null);
+      jest.mocked(grpcCall).mockResolvedValue(null);
 
       const response = await routeRequest({
         tenant_id: 'test-tenant',
@@ -369,7 +362,7 @@ describe('Coordinator Client', () => {
       const timeoutError = new Error('Request timed out');
       timeoutError.code = grpc.status.DEADLINE_EXCEEDED;
 
-      mockGrpcCall.mockRejectedValue(timeoutError);
+      jest.mocked(grpcCall).mockRejectedValue(timeoutError);
 
       const response = await routeRequest({
         tenant_id: 'test-tenant',
@@ -394,7 +387,7 @@ describe('Coordinator Client', () => {
       const unavailableError = new Error('Service unavailable');
       unavailableError.code = grpc.status.UNAVAILABLE;
 
-      mockGrpcCall.mockRejectedValue(unavailableError);
+      jest.mocked(grpcCall).mockRejectedValue(unavailableError);
 
       const response = await routeRequest({
         tenant_id: 'test-tenant',
@@ -419,7 +412,7 @@ describe('Coordinator Client', () => {
       const notFoundError = new Error('Service not found');
       notFoundError.code = grpc.status.NOT_FOUND;
 
-      mockGrpcCall.mockRejectedValue(notFoundError);
+      jest.mocked(grpcCall).mockRejectedValue(notFoundError);
 
       const response = await routeRequest({
         tenant_id: 'test-tenant',
@@ -441,7 +434,7 @@ describe('Coordinator Client', () => {
       const invalidError = new Error('Invalid argument');
       invalidError.code = grpc.status.INVALID_ARGUMENT;
 
-      mockGrpcCall.mockRejectedValue(invalidError);
+      jest.mocked(grpcCall).mockRejectedValue(invalidError);
 
       const response = await routeRequest({
         tenant_id: 'test-tenant',
@@ -462,7 +455,7 @@ describe('Coordinator Client', () => {
       const internalError = new Error('Internal error');
       internalError.code = grpc.status.INTERNAL;
 
-      mockGrpcCall.mockRejectedValue(internalError);
+      jest.mocked(grpcCall).mockRejectedValue(internalError);
 
       const response = await routeRequest({
         tenant_id: 'test-tenant',
@@ -483,7 +476,7 @@ describe('Coordinator Client', () => {
       const unknownError = new Error('Unknown error');
       unknownError.code = 999; // Unknown code
 
-      mockGrpcCall.mockRejectedValue(unknownError);
+      jest.mocked(grpcCall).mockRejectedValue(unknownError);
 
       const response = await routeRequest({
         tenant_id: 'test-tenant',
@@ -504,7 +497,7 @@ describe('Coordinator Client', () => {
       const timeoutError = new Error('Timeout');
       timeoutError.code = grpc.status.DEADLINE_EXCEEDED;
 
-      mockGrpcCall.mockRejectedValue(timeoutError);
+      jest.mocked(grpcCall).mockRejectedValue(timeoutError);
 
       await routeRequest({
         tenant_id: 'test-tenant',
@@ -523,7 +516,7 @@ describe('Coordinator Client', () => {
       };
 
       // Simulate delay
-      mockGrpcCall.mockImplementation(() => {
+      jest.mocked(grpcCall).mockImplementation(() => {
         return new Promise((resolve) => {
           setTimeout(() => resolve(mockResponse), 100);
         });
@@ -551,7 +544,7 @@ describe('Coordinator Client', () => {
         normalized_fields: { successful_service: 'payment-service' },
       };
 
-      mockGrpcCall.mockResolvedValue(mockResponse);
+      jest.mocked(grpcCall).mockResolvedValue(mockResponse);
 
       await routeRequest({
         tenant_id: 'test-tenant',
@@ -560,7 +553,7 @@ describe('Coordinator Client', () => {
       });
 
       // Should convert seconds to milliseconds
-      expect(mockGrpcCall).toHaveBeenCalledWith(
+      expect(jest.mocked(grpcCall)).toHaveBeenCalledWith(
         expect.any(Object),
         'Route',
         expect.any(Object),
@@ -578,7 +571,7 @@ describe('Coordinator Client', () => {
         normalized_fields: { successful_service: 'payment-service' },
       };
 
-      mockGrpcCall.mockResolvedValue(mockResponse);
+      jest.mocked(grpcCall).mockResolvedValue(mockResponse);
 
       await routeRequest({
         tenant_id: 'test-tenant',
@@ -586,7 +579,7 @@ describe('Coordinator Client', () => {
         query_text: 'test query',
       });
 
-      expect(mockGrpcCall).toHaveBeenCalledWith(
+      expect(jest.mocked(grpcCall)).toHaveBeenCalledWith(
         expect.any(Object),
         'Route',
         expect.any(Object),
@@ -607,7 +600,7 @@ describe('Coordinator Client', () => {
         normalized_fields: { successful_service: 'payment-service', rank_used: '1' },
       };
 
-      mockGrpcCall.mockResolvedValue(mockResponse);
+      jest.mocked(grpcCall).mockResolvedValue(mockResponse);
 
       // 2 successful requests
       await routeRequest({
@@ -622,7 +615,7 @@ describe('Coordinator Client', () => {
       });
 
       // 1 failed request
-      mockGrpcCall.mockRejectedValue(new Error('Error'));
+      jest.mocked(grpcCall).mockRejectedValue(new Error('Error'));
       await routeRequest({
         tenant_id: 'test-tenant',
         user_id: 'test-user',
@@ -638,7 +631,7 @@ describe('Coordinator Client', () => {
 
     it('should calculate fallback rate', async () => {
       // Primary success
-      mockGrpcCall.mockResolvedValueOnce({
+      jest.mocked(grpcCall).mockResolvedValueOnce({
         target_services: ['payment-service'],
         normalized_fields: { successful_service: 'payment-service', rank_used: '1' },
       });
@@ -650,7 +643,7 @@ describe('Coordinator Client', () => {
       });
 
       // Fallback success
-      mockGrpcCall.mockResolvedValueOnce({
+      jest.mocked(grpcCall).mockResolvedValueOnce({
         target_services: ['payment-service', 'billing-service'],
         normalized_fields: { successful_service: 'billing-service', rank_used: '2' },
       });
@@ -691,7 +684,7 @@ describe('Coordinator Client', () => {
 
     it('should return false if client creation failed', async () => {
       process.env.COORDINATOR_ENABLED = 'true';
-      createGrpcClient.mockImplementation(() => {
+      jest.mocked(createGrpcClient).mockImplementation(() => {
         throw new Error('Failed');
       });
 

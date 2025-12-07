@@ -51,6 +51,16 @@ describe('gRPC Fallback Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.GRPC_ENABLED = 'true';
+    // Reset all mocks using jest.mocked() to ensure they're recognized as mocks
+    jest.mocked(shouldCallCoordinator).mockReset();
+    jest.mocked(callCoordinatorRoute).mockReset();
+    jest.mocked(processCoordinatorResponse).mockReset();
+    jest.mocked(interpretNormalizedFields).mockReset();
+    jest.mocked(createStructuredFields).mockReset();
+    jest.mocked(logger.info).mockReset();
+    jest.mocked(logger.warn).mockReset();
+    jest.mocked(logger.error).mockReset();
+    jest.mocked(logger.debug).mockReset();
   });
 
   afterEach(() => {
@@ -75,7 +85,7 @@ describe('gRPC Fallback Service', () => {
 
       it('should proceed if GRPC_ENABLED is true', async () => {
         process.env.GRPC_ENABLED = 'true';
-        shouldCallCoordinator.mockReturnValue(false);
+        jest.mocked(shouldCallCoordinator).mockReturnValue(false);
 
         await grpcFetchByCategory('payment', {
           query: 'test query',
@@ -88,7 +98,7 @@ describe('gRPC Fallback Service', () => {
 
     describe('Decision Logic', () => {
       it('should skip Coordinator if internal data is sufficient', async () => {
-        shouldCallCoordinator.mockReturnValue(false);
+        jest.mocked(shouldCallCoordinator).mockReturnValue(false);
 
         const result = await grpcFetchByCategory('payment', {
           query: 'test query',
@@ -108,13 +118,13 @@ describe('gRPC Fallback Service', () => {
       });
 
       it('should call Coordinator if internal data is insufficient', async () => {
-        shouldCallCoordinator.mockReturnValue(true);
-        callCoordinatorRoute.mockResolvedValue({
+        jest.mocked(shouldCallCoordinator).mockReturnValue(true);
+        jest.mocked(callCoordinatorRoute).mockResolvedValue({
           target_services: ['payment-service'],
           normalized_fields: { successful_service: 'payment-service' },
         });
 
-        processCoordinatorResponse.mockReturnValue({
+        jest.mocked(processCoordinatorResponse).mockReturnValue({
           status: 'success_primary',
           success: true,
           target_services: ['payment-service'],
@@ -144,9 +154,9 @@ describe('gRPC Fallback Service', () => {
 
     describe('Coordinator Integration', () => {
       it('should call Coordinator with correct parameters', async () => {
-        shouldCallCoordinator.mockReturnValue(true);
-        callCoordinatorRoute.mockResolvedValue({});
-        processCoordinatorResponse.mockReturnValue({
+        jest.mocked(shouldCallCoordinator).mockReturnValue(true);
+        jest.mocked(callCoordinatorRoute).mockResolvedValue({});
+        jest.mocked(processCoordinatorResponse).mockReturnValue({
           status: 'success_primary',
           success: true,
           target_services: [],
@@ -176,8 +186,8 @@ describe('gRPC Fallback Service', () => {
       });
 
       it('should handle null Coordinator response', async () => {
-        shouldCallCoordinator.mockReturnValue(true);
-        callCoordinatorRoute.mockResolvedValue(null);
+        jest.mocked(shouldCallCoordinator).mockReturnValue(true);
+        jest.mocked(callCoordinatorRoute).mockResolvedValue(null);
 
         const result = await grpcFetchByCategory('payment', {
           query: 'test query',
@@ -192,9 +202,9 @@ describe('gRPC Fallback Service', () => {
       });
 
       it('should handle failed response processing', async () => {
-        shouldCallCoordinator.mockReturnValue(true);
-        callCoordinatorRoute.mockResolvedValue({});
-        processCoordinatorResponse.mockReturnValue(null);
+        jest.mocked(shouldCallCoordinator).mockReturnValue(true);
+        jest.mocked(callCoordinatorRoute).mockResolvedValue({});
+        jest.mocked(processCoordinatorResponse).mockReturnValue(null);
 
         const result = await grpcFetchByCategory('payment', {
           query: 'test query',
@@ -211,8 +221,8 @@ describe('gRPC Fallback Service', () => {
 
     describe('Response Processing', () => {
       it('should convert Coordinator response to content items', async () => {
-        shouldCallCoordinator.mockReturnValue(true);
-        callCoordinatorRoute.mockResolvedValue({});
+        jest.mocked(shouldCallCoordinator).mockReturnValue(true);
+        jest.mocked(callCoordinatorRoute).mockResolvedValue({});
 
         const mockProcessed = {
           status: 'success_primary',
@@ -241,7 +251,7 @@ describe('gRPC Fallback Service', () => {
           ],
         };
 
-        processCoordinatorResponse.mockReturnValue(mockProcessed);
+        jest.mocked(processCoordinatorResponse).mockReturnValue(mockProcessed);
         interpretNormalizedFields.mockReturnValue(mockInterpreted);
         createStructuredFields.mockReturnValue(mockStructured);
 
@@ -277,9 +287,9 @@ describe('gRPC Fallback Service', () => {
       });
 
       it('should use category as contentType if sourceType is missing', async () => {
-        shouldCallCoordinator.mockReturnValue(true);
-        callCoordinatorRoute.mockResolvedValue({});
-        processCoordinatorResponse.mockReturnValue({
+        jest.mocked(shouldCallCoordinator).mockReturnValue(true);
+        jest.mocked(callCoordinatorRoute).mockResolvedValue({});
+        jest.mocked(processCoordinatorResponse).mockReturnValue({
           status: 'success_primary',
           success: true,
           target_services: [],
@@ -304,9 +314,9 @@ describe('gRPC Fallback Service', () => {
       });
 
       it('should handle empty sources', async () => {
-        shouldCallCoordinator.mockReturnValue(true);
-        callCoordinatorRoute.mockResolvedValue({});
-        processCoordinatorResponse.mockReturnValue({
+        jest.mocked(shouldCallCoordinator).mockReturnValue(true);
+        jest.mocked(callCoordinatorRoute).mockResolvedValue({});
+        jest.mocked(processCoordinatorResponse).mockReturnValue({
           status: 'success_primary',
           success: true,
           target_services: [],
@@ -334,8 +344,8 @@ describe('gRPC Fallback Service', () => {
 
     describe('Error Handling', () => {
       it('should handle errors gracefully and return empty array', async () => {
-        shouldCallCoordinator.mockReturnValue(true);
-        callCoordinatorRoute.mockRejectedValue(new Error('Network error'));
+        jest.mocked(shouldCallCoordinator).mockReturnValue(true);
+        jest.mocked(callCoordinatorRoute).mockRejectedValue(new Error('Network error'));
 
         const result = await grpcFetchByCategory('payment', {
           query: 'test query',
@@ -352,9 +362,9 @@ describe('gRPC Fallback Service', () => {
       });
 
       it('should handle processing errors', async () => {
-        shouldCallCoordinator.mockReturnValue(true);
-        callCoordinatorRoute.mockResolvedValue({});
-        processCoordinatorResponse.mockImplementation(() => {
+        jest.mocked(shouldCallCoordinator).mockReturnValue(true);
+        jest.mocked(callCoordinatorRoute).mockResolvedValue({});
+        jest.mocked(processCoordinatorResponse).mockImplementation(() => {
           throw new Error('Processing error');
         });
 
@@ -370,9 +380,9 @@ describe('gRPC Fallback Service', () => {
 
     describe('Logging', () => {
       it('should log when calling Coordinator', async () => {
-        shouldCallCoordinator.mockReturnValue(true);
-        callCoordinatorRoute.mockResolvedValue({});
-        processCoordinatorResponse.mockReturnValue({
+        jest.mocked(shouldCallCoordinator).mockReturnValue(true);
+        jest.mocked(callCoordinatorRoute).mockResolvedValue({});
+        jest.mocked(processCoordinatorResponse).mockReturnValue({
           status: 'success_primary',
           success: true,
           target_services: [],
@@ -398,9 +408,9 @@ describe('gRPC Fallback Service', () => {
       });
 
       it('should log successful data retrieval', async () => {
-        shouldCallCoordinator.mockReturnValue(true);
-        callCoordinatorRoute.mockResolvedValue({});
-        processCoordinatorResponse.mockReturnValue({
+        jest.mocked(shouldCallCoordinator).mockReturnValue(true);
+        jest.mocked(callCoordinatorRoute).mockResolvedValue({});
+        jest.mocked(processCoordinatorResponse).mockReturnValue({
           status: 'success_primary',
           success: true,
           target_services: ['payment-service'],
@@ -433,9 +443,9 @@ describe('gRPC Fallback Service', () => {
 
     describe('Parameter Handling', () => {
       it('should use default userId if not provided', async () => {
-        shouldCallCoordinator.mockReturnValue(true);
-        callCoordinatorRoute.mockResolvedValue({});
-        processCoordinatorResponse.mockReturnValue({
+        jest.mocked(shouldCallCoordinator).mockReturnValue(true);
+        jest.mocked(callCoordinatorRoute).mockResolvedValue({});
+        jest.mocked(processCoordinatorResponse).mockReturnValue({
           status: 'success_primary',
           success: true,
           target_services: [],
@@ -458,9 +468,9 @@ describe('gRPC Fallback Service', () => {
       });
 
       it('should pass vectorResults count in metadata', async () => {
-        shouldCallCoordinator.mockReturnValue(true);
-        callCoordinatorRoute.mockResolvedValue({});
-        processCoordinatorResponse.mockReturnValue({
+        jest.mocked(shouldCallCoordinator).mockReturnValue(true);
+        jest.mocked(callCoordinatorRoute).mockResolvedValue({});
+        jest.mocked(processCoordinatorResponse).mockReturnValue({
           status: 'success_primary',
           success: true,
           target_services: [],
