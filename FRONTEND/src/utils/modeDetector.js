@@ -4,34 +4,6 @@
 
 import { MODES } from '../store/slices/chatMode.slice.js';
 
-// Assessment Support Mode keywords
-const _ASSESSMENT_KEYWORDS = [
-  'assessment',
-  'test',
-  'exam',
-  'question bank',
-  'scoring',
-  'grading',
-  'quiz',
-  'questions',
-  'evaluation',
-];
-
-// DevLab Support Mode keywords
-const _DEVLAB_KEYWORDS = [
-  'devlab',
-  'auto grader',
-  'code execution',
-  'sandbox',
-  'runtime error',
-  'submission',
-  'code',
-  'programming',
-  'debug',
-  'github integration',
-  'environment',
-];
-
 // Exit Support Mode keywords
 const EXIT_KEYWORDS = [
   'exit support',
