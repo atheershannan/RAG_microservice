@@ -4,23 +4,30 @@
  */
 
 // MOCKS MUST BE FIRST - before any imports (Jest hoists these)
-jest.mock('../../../src/communication/communicationManager.service.js', () => ({
-  shouldCallCoordinator: jest.fn(),
-  callCoordinatorRoute: jest.fn(),
-  processCoordinatorResponse: jest.fn(),
-}));
-jest.mock('../../../src/communication/schemaInterpreter.service.js', () => ({
-  interpretNormalizedFields: jest.fn(),
-  createStructuredFields: jest.fn(),
-}));
-jest.mock('../../../src/utils/logger.util.js', () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-  },
-}));
+// In ES modules, jest is available as a global in factory functions
+jest.mock('../../../src/communication/communicationManager.service.js', () => {
+  return {
+    shouldCallCoordinator: globalThis.jest.fn(),
+    callCoordinatorRoute: globalThis.jest.fn(),
+    processCoordinatorResponse: globalThis.jest.fn(),
+  };
+});
+jest.mock('../../../src/communication/schemaInterpreter.service.js', () => {
+  return {
+    interpretNormalizedFields: globalThis.jest.fn(),
+    createStructuredFields: globalThis.jest.fn(),
+  };
+});
+jest.mock('../../../src/utils/logger.util.js', () => {
+  return {
+    logger: {
+      info: globalThis.jest.fn(),
+      warn: globalThis.jest.fn(),
+      error: globalThis.jest.fn(),
+      debug: globalThis.jest.fn(),
+    },
+  };
+});
 
 import { jest } from '@jest/globals';
 

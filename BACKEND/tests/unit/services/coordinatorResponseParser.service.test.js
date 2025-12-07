@@ -4,13 +4,16 @@
  */
 
 // MOCKS MUST BE FIRST - before any imports (Jest hoists these)
-jest.mock('../../../src/utils/logger.util.js', () => ({
-  logger: {
-    debug: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  },
-}));
+// In ES modules, jest is available as a global in factory functions
+jest.mock('../../../src/utils/logger.util.js', () => {
+  return {
+    logger: {
+      debug: globalThis.jest.fn(),
+      warn: globalThis.jest.fn(),
+      error: globalThis.jest.fn(),
+    },
+  };
+});
 
 import { jest } from '@jest/globals';
 

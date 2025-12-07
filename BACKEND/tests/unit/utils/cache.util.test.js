@@ -3,14 +3,17 @@
  */
 
 // MOCKS MUST BE FIRST - before any imports (Jest hoists these)
-jest.mock('../../../src/config/redis.config.js', () => ({
-  redis: {
-    get: jest.fn(),
-    setex: jest.fn(),
-    del: jest.fn(),
-    exists: jest.fn(),
-  },
-}));
+// In ES modules, jest is available as a global in factory functions
+jest.mock('../../../src/config/redis.config.js', () => {
+  return {
+    redis: {
+      get: globalThis.jest.fn(),
+      setex: globalThis.jest.fn(),
+      del: globalThis.jest.fn(),
+      exists: globalThis.jest.fn(),
+    },
+  };
+});
 
 import { jest } from '@jest/globals';
 import { get, set, del, exists } from '../../../src/utils/cache.util.js';

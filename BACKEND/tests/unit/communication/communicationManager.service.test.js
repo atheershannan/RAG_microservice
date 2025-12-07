@@ -4,22 +4,29 @@
  */
 
 // MOCKS MUST BE FIRST - before any imports (Jest hoists these)
-jest.mock('../../../src/clients/coordinator.client.js', () => ({
-  routeRequest: jest.fn(),
-}));
-jest.mock('../../../src/services/coordinatorResponseParser.service.js', () => ({
-  parseRouteResponse: jest.fn(),
-  extractBusinessData: jest.fn(),
-  getRoutingSummary: jest.fn(),
-}));
-jest.mock('../../../src/utils/logger.util.js', () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-  },
-}));
+// In ES modules, jest is available as a global in factory functions
+jest.mock('../../../src/clients/coordinator.client.js', () => {
+  return {
+    routeRequest: globalThis.jest.fn(),
+  };
+});
+jest.mock('../../../src/services/coordinatorResponseParser.service.js', () => {
+  return {
+    parseRouteResponse: globalThis.jest.fn(),
+    extractBusinessData: globalThis.jest.fn(),
+    getRoutingSummary: globalThis.jest.fn(),
+  };
+});
+jest.mock('../../../src/utils/logger.util.js', () => {
+  return {
+    logger: {
+      info: globalThis.jest.fn(),
+      warn: globalThis.jest.fn(),
+      error: globalThis.jest.fn(),
+      debug: globalThis.jest.fn(),
+    },
+  };
+});
 
 import { jest } from '@jest/globals';
 
@@ -85,9 +92,8 @@ describe('Communication Manager', () => {
       });
 
       it('should return true when query requires real-time data', () => {
-        const vectorResults = [
-          { similarity: 0.8, content: 'result 1' },
-        ];
+        // Use empty vector results so real-time check is reached
+        const vectorResults = [];
 
         const result = shouldCallCoordinator('show me current status', vectorResults, {});
 

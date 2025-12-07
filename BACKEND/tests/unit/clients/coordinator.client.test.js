@@ -4,18 +4,24 @@
  */
 
 // MOCKS MUST BE FIRST - before any imports (Jest hoists these)
-jest.mock('../../../src/clients/grpcClient.util.js', () => ({
-  createGrpcClient: jest.fn(),
-  grpcCall: jest.fn(),
-}));
-jest.mock('../../../src/utils/logger.util.js', () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-  },
-}));
+// In ES modules, jest is available as a global in factory functions
+jest.mock('../../../src/clients/grpcClient.util.js', () => {
+  // jest is available globally in factory functions
+  return {
+    createGrpcClient: globalThis.jest.fn(),
+    grpcCall: globalThis.jest.fn(),
+  };
+});
+jest.mock('../../../src/utils/logger.util.js', () => {
+  return {
+    logger: {
+      info: globalThis.jest.fn(),
+      warn: globalThis.jest.fn(),
+      error: globalThis.jest.fn(),
+      debug: globalThis.jest.fn(),
+    },
+  };
+});
 
 import { jest } from '@jest/globals';
 
@@ -40,14 +46,12 @@ describe('Coordinator Client', () => {
       close: jest.fn(),
     };
 
-    // Mock grpcCall utility
-    mockGrpcCall = jest.fn();
-    // grpcCall is already a jest.fn() from the mock factory, use it directly
-    grpcCall.mockImplementation(mockGrpcCall);
-
-    // Mock createGrpcClient
-    // createGrpcClient is already a jest.fn() from the mock factory, use it directly
+    // grpcCall and createGrpcClient are already jest.fn() from jest.mock() factory
+    // Just reset and set return values
+    grpcCall.mockReset();
+    createGrpcClient.mockReset();
     createGrpcClient.mockReturnValue(mockClient);
+    createGrpcClient.mockReset = mockCreateGrpcClientFn.mockReset.bind(mockCreateGrpcClientFn);
 
     // Reset environment variables
     delete process.env.COORDINATOR_ENABLED;
