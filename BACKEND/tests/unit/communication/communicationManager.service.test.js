@@ -4,26 +4,29 @@
  */
 
 // MOCKS MUST BE FIRST - before any imports (Jest hoists these)
-// In ES modules, jest is available as a global in factory functions
+// In factory functions, jest is available as a global (hoisted by Jest)
 jest.mock('../../../src/clients/coordinator.client.js', () => {
+  // eslint-disable-next-line no-undef
   return {
-    routeRequest: globalThis.jest.fn(),
+    routeRequest: jest.fn(),
   };
 });
 jest.mock('../../../src/services/coordinatorResponseParser.service.js', () => {
+  // eslint-disable-next-line no-undef
   return {
-    parseRouteResponse: globalThis.jest.fn(),
-    extractBusinessData: globalThis.jest.fn(),
-    getRoutingSummary: globalThis.jest.fn(),
+    parseRouteResponse: jest.fn(),
+    extractBusinessData: jest.fn(),
+    getRoutingSummary: jest.fn(),
   };
 });
 jest.mock('../../../src/utils/logger.util.js', () => {
+  // eslint-disable-next-line no-undef
   return {
     logger: {
-      info: globalThis.jest.fn(),
-      warn: globalThis.jest.fn(),
-      error: globalThis.jest.fn(),
-      debug: globalThis.jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
     },
   };
 });

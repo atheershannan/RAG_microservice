@@ -3,14 +3,15 @@
  */
 
 // MOCKS MUST BE FIRST - before any imports (Jest hoists these)
-// In ES modules, jest is available as a global in factory functions
+// In factory functions, jest is available as a global (hoisted by Jest)
 jest.mock('../../../src/config/redis.config.js', () => {
+  // eslint-disable-next-line no-undef
   return {
     redis: {
-      get: globalThis.jest.fn(),
-      setex: globalThis.jest.fn(),
-      del: globalThis.jest.fn(),
-      exists: globalThis.jest.fn(),
+      get: jest.fn(),
+      setex: jest.fn(),
+      del: jest.fn(),
+      exists: jest.fn(),
     },
   };
 });
