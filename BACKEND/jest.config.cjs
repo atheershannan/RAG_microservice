@@ -23,6 +23,5 @@ module.exports = {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   injectGlobals: true,
-  extensionsToTreatAsEsm: ['.js'],
 };
 
