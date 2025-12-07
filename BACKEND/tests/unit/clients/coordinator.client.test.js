@@ -42,10 +42,12 @@ describe('Coordinator Client', () => {
 
     // Mock grpcCall utility
     mockGrpcCall = jest.fn();
-    jest.mocked(grpcCall).mockImplementation(mockGrpcCall);
+    // grpcCall is already a jest.fn() from the mock factory, use it directly
+    grpcCall.mockImplementation(mockGrpcCall);
 
     // Mock createGrpcClient
-    jest.mocked(createGrpcClient).mockReturnValue(mockClient);
+    // createGrpcClient is already a jest.fn() from the mock factory, use it directly
+    createGrpcClient.mockReturnValue(mockClient);
 
     // Reset environment variables
     delete process.env.COORDINATOR_ENABLED;
@@ -125,7 +127,7 @@ describe('Coordinator Client', () => {
         query_text: 'test query 1',
       });
 
-      const firstCallCount = jest.mocked(createGrpcClient).mock.calls.length;
+      const firstCallCount = createGrpcClient.mock.calls.length;
 
       // Second call
       await routeRequest({
@@ -135,7 +137,7 @@ describe('Coordinator Client', () => {
       });
 
       // Should not create new client
-      expect(jest.mocked(createGrpcClient).mock.calls.length).toBe(firstCallCount);
+      expect(createGrpcClient.mock.calls.length).toBe(firstCallCount);
     });
 
     it('should not create client if COORDINATOR_ENABLED is false', async () => {
@@ -154,7 +156,7 @@ describe('Coordinator Client', () => {
 
     it('should handle client creation errors gracefully', async () => {
       process.env.COORDINATOR_ENABLED = 'true';
-      jest.mocked(createGrpcClient).mockImplementation(() => {
+      createGrpcClient.mockImplementation(() => {
         throw new Error('Failed to create client');
       });
 
@@ -685,7 +687,7 @@ describe('Coordinator Client', () => {
 
     it('should return false if client creation failed', async () => {
       process.env.COORDINATOR_ENABLED = 'true';
-      jest.mocked(createGrpcClient).mockImplementation(() => {
+      createGrpcClient.mockImplementation(() => {
         throw new Error('Failed');
       });
 
