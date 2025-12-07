@@ -24,14 +24,14 @@ describe('Cache Utility', () => {
 
   describe('get', () => {
     it('should get value from cache', async () => {
-      redis.get.mockResolvedValue(JSON.stringify({ data: 'test' }));
+      jest.mocked(redis.get).mockResolvedValue(JSON.stringify({ data: 'test' }));
 
       const result = await get('test-key');
       expect(result).toEqual({ data: 'test' });
     });
 
     it('should return null if key does not exist', async () => {
-      redis.get.mockResolvedValue(null);
+      jest.mocked(redis.get).mockResolvedValue(null);
 
       const result = await get('non-existent-key');
       expect(result).toBeNull();
@@ -40,7 +40,7 @@ describe('Cache Utility', () => {
 
   describe('set', () => {
     it('should set value in cache with TTL', async () => {
-      redis.setex.mockResolvedValue('OK');
+      jest.mocked(redis.setex).mockResolvedValue('OK');
 
       const result = await set('test-key', { data: 'test' }, 3600);
       expect(result).toBe(true);
@@ -50,7 +50,7 @@ describe('Cache Utility', () => {
 
   describe('del', () => {
     it('should delete value from cache', async () => {
-      redis.del.mockResolvedValue(1);
+      jest.mocked(redis.del).mockResolvedValue(1);
 
       const result = await del('test-key');
       expect(result).toBe(true);
@@ -59,7 +59,7 @@ describe('Cache Utility', () => {
 
   describe('exists', () => {
     it('should check if key exists', async () => {
-      redis.exists.mockResolvedValue(1);
+      jest.mocked(redis.exists).mockResolvedValue(1);
 
       const result = await exists('test-key');
       expect(result).toBe(true);

@@ -80,45 +80,47 @@ describe('Knowledge Graph Integration', () => {
         }
       });
 
-      // Create test edges
-      await prisma.knowledgeGraphEdge.upsert({
+      // Create test edges - use findFirst + create/update pattern since compound unique constraint may not exist
+      const edge1 = await prisma.knowledgeGraphEdge.findFirst({
         where: {
-          tenantId_sourceNodeId_targetNodeId_edgeType: {
-            tenantId: testTenantId,
-            sourceNodeId: 'skill:javascript',
-            targetNodeId: 'content:content-1',
-            edgeType: 'supports'
-          }
-        },
-        update: {},
-        create: {
           tenantId: testTenantId,
           sourceNodeId: 'skill:javascript',
           targetNodeId: 'content:content-1',
-          edgeType: 'supports',
-          weight: 0.9
+          edgeType: 'supports'
         }
       });
-
-      await prisma.knowledgeGraphEdge.upsert({
-        where: {
-          tenantId_sourceNodeId_targetNodeId_edgeType: {
+      if (!edge1) {
+        await prisma.knowledgeGraphEdge.create({
+          data: {
             tenantId: testTenantId,
-            sourceNodeId: 'user:test-user-456',
-            targetNodeId: 'skill:javascript',
-            edgeType: 'learning'
+            sourceNodeId: 'skill:javascript',
+            targetNodeId: 'content:content-1',
+            edgeType: 'supports',
+            weight: 0.9
           }
-        },
-        update: {},
-        create: {
+        });
+      }
+
+      const edge2 = await prisma.knowledgeGraphEdge.findFirst({
+        where: {
           tenantId: testTenantId,
           sourceNodeId: 'user:test-user-456',
           targetNodeId: 'skill:javascript',
-          edgeType: 'learning',
-          weight: 0.8,
-          properties: { progress: 0.6 }
+          edgeType: 'learning'
         }
       });
+      if (!edge2) {
+        await prisma.knowledgeGraphEdge.create({
+          data: {
+            tenantId: testTenantId,
+            sourceNodeId: 'user:test-user-456',
+            targetNodeId: 'skill:javascript',
+            edgeType: 'learning',
+            weight: 0.8,
+            properties: { progress: 0.6 }
+          }
+        });
+      }
     } catch (error) {
       console.warn('Test setup failed (may already exist):', error.message);
     }

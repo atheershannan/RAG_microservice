@@ -68,6 +68,7 @@ describe('Error Handler Middleware', () => {
           message: 'Not Found',
           statusCode: 404,
           path: '/not-found',
+          hint: expect.any(String),
         },
       });
     });

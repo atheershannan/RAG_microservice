@@ -275,7 +275,7 @@ describe('Coordinator Response Parser', () => {
 
         expect(parsed).toBeDefined();
         expect(parsed.envelope).toBeNull();
-        expect(logger.warn).toHaveBeenCalledWith(
+        expect(jest.mocked(logger.warn)).toHaveBeenCalledWith(
           'Failed to parse envelope_json',
           expect.any(Object)
         );
@@ -292,7 +292,7 @@ describe('Coordinator Response Parser', () => {
 
         expect(parsed).toBeDefined();
         expect(parsed.routing).toBeNull();
-        expect(logger.warn).toHaveBeenCalledWith(
+        expect(jest.mocked(logger.warn)).toHaveBeenCalledWith(
           'Failed to parse routing_metadata',
           expect.any(Object)
         );
