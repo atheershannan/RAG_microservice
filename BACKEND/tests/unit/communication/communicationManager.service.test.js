@@ -3,9 +3,7 @@
  * Tests for decision logic, Coordinator integration, and response processing
  */
 
-import { jest } from '@jest/globals';
-
-// Mock dependencies BEFORE imports
+// MOCKS MUST BE FIRST - before any imports (Jest hoists these)
 jest.mock('../../../src/clients/coordinator.client.js', () => ({
   routeRequest: jest.fn(),
 }));
@@ -22,6 +20,8 @@ jest.mock('../../../src/utils/logger.util.js', () => ({
     debug: jest.fn(),
   },
 }));
+
+import { jest } from '@jest/globals';
 
 // Import AFTER mocks are set up
 import {

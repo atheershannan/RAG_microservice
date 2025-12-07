@@ -3,9 +3,7 @@
  * Tests for RAG pipeline integration with Coordinator
  */
 
-import { jest } from '@jest/globals';
-
-// Mock dependencies BEFORE imports
+// MOCKS MUST BE FIRST - before any imports (Jest hoists these)
 jest.mock('../../../src/communication/communicationManager.service.js', () => ({
   shouldCallCoordinator: jest.fn(),
   callCoordinatorRoute: jest.fn(),
@@ -23,6 +21,8 @@ jest.mock('../../../src/utils/logger.util.js', () => ({
     debug: jest.fn(),
   },
 }));
+
+import { jest } from '@jest/globals';
 
 // Import AFTER mocks are set up
 import { grpcFetchByCategory } from '../../../src/services/grpcFallback.service.js';

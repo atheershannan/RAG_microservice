@@ -137,7 +137,7 @@ export function shouldCallCoordinator(query, vectorResults = [], internalData = 
   } catch (error) {
     logger.error('Error in shouldCallCoordinator decision', {
       error: error.message,
-      query: query.substring(0, 100),
+      query: query ? query.substring(0, 100) : 'null',
     });
     // On error, default to NOT calling Coordinator (fail-safe)
     return false;

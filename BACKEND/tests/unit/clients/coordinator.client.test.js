@@ -3,9 +3,7 @@
  * Tests for gRPC client initialization, connection handling, and Route() method calls
  */
 
-import { jest } from '@jest/globals';
-
-// Mock dependencies BEFORE imports
+// MOCKS MUST BE FIRST - before any imports (Jest hoists these)
 jest.mock('../../../src/clients/grpcClient.util.js', () => ({
   createGrpcClient: jest.fn(),
   grpcCall: jest.fn(),
@@ -18,6 +16,8 @@ jest.mock('../../../src/utils/logger.util.js', () => ({
     debug: jest.fn(),
   },
 }));
+
+import { jest } from '@jest/globals';
 
 // Import AFTER mocks are set up
 import { routeRequest, getMetrics, isCoordinatorAvailable, resetClient, resetMetrics } from '../../../src/clients/coordinator.client.js';

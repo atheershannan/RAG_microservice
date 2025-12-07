@@ -2,10 +2,7 @@
  * Cache utility tests
  */
 
-import { jest } from '@jest/globals';
-import { get, set, del, exists } from '../../../src/utils/cache.util.js';
-
-// Mock Redis
+// MOCKS MUST BE FIRST - before any imports (Jest hoists these)
 jest.mock('../../../src/config/redis.config.js', () => ({
   redis: {
     get: jest.fn(),
@@ -15,6 +12,8 @@ jest.mock('../../../src/config/redis.config.js', () => ({
   },
 }));
 
+import { jest } from '@jest/globals';
+import { get, set, del, exists } from '../../../src/utils/cache.util.js';
 import { redis } from '../../../src/config/redis.config.js';
 
 describe('Cache Utility', () => {

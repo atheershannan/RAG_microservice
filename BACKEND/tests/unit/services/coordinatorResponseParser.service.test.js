@@ -3,9 +3,7 @@
  * Tests for parsing RouteResponse, extracting business data, and handling all scenarios
  */
 
-import { jest } from '@jest/globals';
-
-// Mock logger
+// MOCKS MUST BE FIRST - before any imports (Jest hoists these)
 jest.mock('../../../src/utils/logger.util.js', () => ({
   logger: {
     debug: jest.fn(),
@@ -13,6 +11,8 @@ jest.mock('../../../src/utils/logger.util.js', () => ({
     error: jest.fn(),
   },
 }));
+
+import { jest } from '@jest/globals';
 
 import {
   parseRouteResponse,
