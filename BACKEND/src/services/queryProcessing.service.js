@@ -402,8 +402,8 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
           original: query.substring(0, 100),
           translated: translatedQuery.substring(0, 100),
         });
-      } else {
       }
+      // Translation not needed, using original query
     } catch (translationError) {
       
       logger.warn('Translation failed, using original query', {
@@ -427,12 +427,12 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
     let confidence = min_confidence;
     let similarVectors = []; // Initialize outside try block to avoid "not defined" error
     let kgRelations = []; // Initialize KG relations outside try block
-    let userLearningContext = null; // Initialize user learning context outside try block
+    const userLearningContext = null; // Initialize user learning context outside try block
     
     // 🎯 Filtering Context Tracking
     // Use context.role as priority, then userProfile.role, then anonymous
     // Initialize with context.role if provided (highest priority)
-    let filteringContext = {
+    const filteringContext = {
       vectorResultsFound: 0,
       afterThreshold: 0,
       afterRBAC: 0,
@@ -1166,7 +1166,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
     // It will only call Coordinator if internal data is insufficient
     
     let coordinatorSources = [];
-    let coordinatorErrors = [];
+    const coordinatorErrors = [];
     
     // Attempt Coordinator call (only if internal data is insufficient)
     // Note: grpcFetchByCategory() will check shouldCallCoordinator() internally
@@ -1386,7 +1386,7 @@ export async function processQuery({ query, tenant_id, context = {}, options = {
         filtering_reason: filteringContext.reason,
         vectors_before_rbac: filteringContext.vectorResultsFound,
         vectors_after_rbac: filteringContext.afterRBAC,
-        user_role: userRole,
+        user_role: filteringContext.userRole,
         reason_code: reasonCode,
       });
 

@@ -31,7 +31,7 @@ if (redisEnabled) {
 
     // Suppress all error events after first one
     let errorLogged = false;
-    redis.on('error', (err) => {
+    redis.on('error', (_err) => {
       if (!errorLogged) {
         logger.warn('Redis connection error (Redis is optional - service will work without it). Disabling Redis...');
         errorLogged = true;

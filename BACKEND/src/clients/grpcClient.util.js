@@ -7,8 +7,7 @@ import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import { logger } from '../utils/logger.util.js';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { existsSync } from 'fs';
+import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -63,7 +62,7 @@ export function createGrpcClient(serviceUrl, protoPath, serviceName, options = {
 
     const client = new service(
       serviceUrl,
-      grpc.credentials.createInsecure(),
+      getCredentials(),  // ✅ Use conditional credentials
       options.clientOptions || {}
     );
 
@@ -104,11 +103,37 @@ function getNestedService(packageDef, serviceName) {
 }
 
 /**
+ * Get gRPC credentials based on environment
+ * @returns {Object} gRPC credentials
+ */
+function getCredentials() {
+  // Use SSL in production
+  if (process.env.GRPC_USE_SSL === 'true') {
+    logger.info('Using SSL/TLS credentials for gRPC');
+    
+    const rootCert = process.env.GRPC_ROOT_CERT;
+    if (rootCert) {
+      // Use custom root certificate
+      return grpc.credentials.createSsl(
+        Buffer.from(rootCert, 'base64')
+      );
+    }
+    
+    // Use default SSL credentials
+    return grpc.credentials.createSsl();
+  }
+  
+  // Use insecure credentials in development
+  logger.info('Using insecure credentials for gRPC (development)');
+  return grpc.credentials.createInsecure();
+}
+
+/**
  * Make gRPC call with promise wrapper
  * @param {Object} client - gRPC client
  * @param {string} methodName - Method name
  * @param {Object} request - Request object
- * @param {Object} metadata - Optional metadata
+ * @param {Object|grpc.Metadata} metadata - Optional metadata (plain object or grpc.Metadata instance)
  * @param {number} timeout - Timeout in milliseconds (default: 5000)
  * @returns {Promise<Object>} Response
  */
@@ -116,10 +141,21 @@ export function grpcCall(client, methodName, request, metadata = {}, timeout = 5
   return new Promise((resolve, reject) => {
     const deadline = new Date();
     deadline.setMilliseconds(deadline.getMilliseconds() + timeout);
+    
+    // Convert plain object to grpc.Metadata if needed
+    let grpcMetadata;
+    if (metadata instanceof grpc.Metadata) {
+      grpcMetadata = metadata;
+    } else {
+      grpcMetadata = new grpc.Metadata();
+      Object.entries(metadata).forEach(([key, value]) => {
+        grpcMetadata.add(key, value.toString());
+      });
+    }
 
     const call = client[methodName](
       request,
-      metadata,
+      grpcMetadata,  // ✅ Use grpc.Metadata instance
       { deadline },
       (error, response) => {
         if (error) {

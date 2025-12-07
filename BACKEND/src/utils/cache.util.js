@@ -5,7 +5,6 @@
  */
 
 import { redis, isRedisAvailable } from '../config/redis.config.js';
-import { logger } from './logger.util.js';
 
 /**
  * Get value from cache

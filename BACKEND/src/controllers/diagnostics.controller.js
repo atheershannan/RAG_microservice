@@ -483,7 +483,7 @@ export async function testVectorSearch(req, res, next) {
     // Validate JSON before sending
     try {
       // Test for circular references using JSON.parse(JSON.stringify())
-      const testJson = JSON.parse(JSON.stringify(response));
+      JSON.parse(JSON.stringify(response));
       res.json(response);
     } catch (jsonError) {
       
@@ -501,7 +501,7 @@ export async function testVectorSearch(req, res, next) {
         timestamp: new Date().toISOString(),
         test_query: String(testQuery || ''),
         tenant: {
-          domain: String(tenantDomain || ''),
+          domain: String(tenant?.domain || tenantDomainOrId || ''),
           id: String(tenantId || ''),
         },
       });

@@ -23,7 +23,9 @@ message RouteRequest {
   string tenant_id = 1;                    // Tenant identifier
   string user_id = 2;                      // User identifier
   string query_text = 3;                   // Original user query
-  map<string, string> metadata = 4;        // Additional metadata (query context, required fields, etc.)
+  string requester_service = 4;            // Service making the request (e.g., 'rag-service')
+  map<string, string> context = 5;         // Additional context (query context, required fields, etc.)
+  string envelope_json = 6;                 // Universal Envelope JSON string
 }
 
 /**

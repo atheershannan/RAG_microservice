@@ -6,10 +6,10 @@
 /**
  * Format bot response for enhanced readability
  * @param {string} answer - Raw AI response
- * @param {Object} context - Additional context for formatting
+ * @param {Object} _context - Additional context for formatting (reserved for future use)
  * @returns {string} Formatted response
  */
-export function formatBotResponse(answer, context = {}) {
+export function formatBotResponse(answer, _context = {}) {
   if (!answer || typeof answer !== 'string') {
     return answer;
   }

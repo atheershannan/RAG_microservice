@@ -6,7 +6,6 @@
 import { getPrismaClient } from '../config/database.config.js';
 import { logger } from '../utils/logger.util.js';
 import { getUserProfile, getUserSkillGaps } from './userProfile.service.js';
-import { getOrCreateTenant } from './tenant.service.js';
 import { fetchLearningRecommendations } from '../clients/aiLearner.client.js';
 
 /**

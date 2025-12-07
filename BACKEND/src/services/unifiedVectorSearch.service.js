@@ -6,7 +6,6 @@
 
 import { getPrismaClient } from '../config/database.config.js';
 import { logger } from '../utils/logger.util.js';
-import { Prisma } from '@prisma/client';
 
 /**
  * Unified vector search function

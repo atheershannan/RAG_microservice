@@ -8,6 +8,7 @@
 
 import { logger } from '../utils/logger.util.js';
 import { createGrpcClient, grpcCall } from './grpcClient.util.js';
+import { generateSignature } from '../utils/signature.js';
 import * as grpc from '@grpc/grpc-js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -50,6 +51,49 @@ const COORDINATOR_PROTO_PATH = process.env.COORDINATOR_PROTO_PATH ||
   join(__dirname, '../../DATABASE/proto/rag/v1/coordinator.proto');
 const COORDINATOR_SERVICE_NAME = process.env.COORDINATOR_SERVICE_NAME || 'rag.v1.CoordinatorService';
 const GRPC_TIMEOUT = parseInt(process.env.GRPC_TIMEOUT || '30', 10) * 1000; // Convert seconds to milliseconds
+
+/**
+ * Validate required environment variables
+ */
+function validateEnvironment() {
+  const required = ['RAG_PRIVATE_KEY'];
+  const missing = required.filter(key => !process.env[key]);
+  
+  if (missing.length > 0) {
+    logger.error('[Coordinator] Missing required environment variables', {
+      missing,
+      hint: 'Set RAG_PRIVATE_KEY in .env file (base64 encoded PEM format)'
+    });
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+  
+  // Validate private key format
+  try {
+    const privateKey = Buffer.from(process.env.RAG_PRIVATE_KEY, 'base64').toString('utf-8');
+    if (!privateKey.includes('BEGIN') || !privateKey.includes('PRIVATE KEY')) {
+      throw new Error('Invalid private key format - must be PEM format');
+    }
+    logger.info('[Coordinator] Environment validation passed');
+  } catch (error) {
+    logger.error('[Coordinator] Invalid RAG_PRIVATE_KEY format', {
+      error: error.message,
+      hint: 'Key must be base64 encoded PEM format (e.g., -----BEGIN PRIVATE KEY-----)'
+    });
+    throw error;
+  }
+}
+
+// Validate on module load (except in tests)
+if (process.env.NODE_ENV !== 'test') {
+  try {
+    validateEnvironment();
+  } catch (error) {
+    logger.error('[Coordinator] Environment validation failed on startup', {
+      error: error.message
+    });
+    // Don't throw - let service start but log the error
+  }
+}
 
 // Monitoring metrics
 const metrics = {
@@ -124,6 +168,73 @@ export function resetClient() {
   grpcClient = null;
   clientCreationError = null;
   logger.info('Coordinator gRPC client reset');
+}
+
+/**
+ * Generate unique request ID
+ */
+function generateRequestId() {
+  return `rag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * Create Universal Envelope for request
+ */
+function createEnvelope(tenant_id, user_id, query_text, metadata) {
+  return {
+    version: '1.0',
+    timestamp: new Date().toISOString(),
+    request_id: generateRequestId(),
+    tenant_id: tenant_id || '',
+    user_id: user_id || '',
+    source: 'rag-service',
+    payload: {
+      query_text: query_text,
+      metadata: metadata || {}
+    }
+  };
+}
+
+/**
+ * Generate gRPC metadata with signature
+ */
+function createSignedMetadata(request) {
+  const privateKey = process.env.RAG_PRIVATE_KEY;
+  
+  if (!privateKey) {
+    logger.error('RAG_PRIVATE_KEY not configured');
+    throw new Error('RAG_PRIVATE_KEY environment variable is required');
+  }
+  
+  // Decode private key from base64
+  const decodedKey = Buffer.from(privateKey, 'base64').toString('utf-8');
+  
+  const timestamp = Date.now();
+  
+  // Create canonical data for signature
+  const dataToSign = {
+    tenant_id: request.tenant_id,
+    user_id: request.user_id,
+    query_text: request.query_text,
+    requester_service: 'rag-service',
+    timestamp: timestamp
+  };
+  
+  // Generate signature using existing utility
+  const signature = generateSignature('rag-service', decodedKey, dataToSign);
+  
+  // Create gRPC metadata
+  const metadata = new grpc.Metadata();
+  metadata.add('x-signature', signature);
+  metadata.add('x-timestamp', timestamp.toString());
+  metadata.add('x-requester-service', 'rag-service');
+  
+  logger.info('[Coordinator] Generated signature for request', {
+    timestamp,
+    has_signature: !!signature
+  });
+  
+  return metadata;
 }
 
 /**
@@ -218,27 +329,36 @@ export async function routeRequest({ tenant_id, user_id, query_text, metadata = 
   }
 
   try {
-    // Prepare gRPC request
-    const request = {
+    logger.info('[Coordinator] Routing request via gRPC', {
       tenant_id,
       user_id,
-      query_text,
-      metadata: metadata || {},
-    };
-
-    logger.debug('Sending route request to Coordinator', {
-      tenant_id,
-      user_id,
-      query_length: query_text.length,
-      metadata_keys: Object.keys(metadata),
+      query_text_preview: query_text.substring(0, 50),
+      has_metadata: Object.keys(metadata).length > 0,
     });
 
-    // Make gRPC call to Coordinator.Route()
+    // Create Universal Envelope
+    const envelope = createEnvelope(tenant_id, user_id, query_text, metadata);
+    
+    // Build request with all required fields
+    const request = {
+      tenant_id: tenant_id || '',
+      user_id: user_id || '',
+      query_text: query_text,
+      requester_service: 'rag-service',  // ✅ Added
+      context: metadata || {},            // ✅ Renamed from metadata
+      envelope_json: JSON.stringify(envelope)  // ✅ Added
+    };
+
+    // Generate signed metadata
+    const signedMetadata = createSignedMetadata(request);
+
+    // Make gRPC call with signature
+    logger.info('[Coordinator] Calling Route RPC with signature');
     const response = await grpcCall(
       client,
       'Route',
       request,
-      {},
+      signedMetadata,  // ✅ Include signature metadata
       GRPC_TIMEOUT
     );
 
@@ -261,14 +381,15 @@ export async function routeRequest({ tenant_id, user_id, query_text, metadata = 
         metrics.fallbackRequests++;
       }
 
-      logger.info('Coordinator route request successful', {
+      logger.info('[Coordinator] Received routing response', {
         tenant_id,
         user_id,
-        target_services: targetServices,
+        has_target_services: !!response.target_services,
+        target_count: response.target_services?.length || 0,
+        processing_time_ms: processingTime,
         rank_used: rankUsed,
         successful_service: normalizedFields.successful_service,
         quality_score: normalizedFields.quality_score,
-        processing_time_ms: processingTime,
         total_attempts: normalizedFields.total_attempts,
       });
     } else {
@@ -332,9 +453,13 @@ export async function isCoordinatorAvailable() {
     return false;
   }
 
-  // For now, just check if client exists
-  // In the future, could add a health check RPC
-  return client !== null;
+  // Use waitForReady to check connection
+  return new Promise((resolve) => {
+    const deadline = Date.now() + 5000; // 5 second timeout
+    client.waitForReady(deadline, (error) => {
+      resolve(!error);
+    });
+  });
 }
 
 /**

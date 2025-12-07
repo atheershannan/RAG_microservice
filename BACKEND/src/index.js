@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
 import { errorHandler, notFoundHandler } from './middleware/error-handler.middleware.js';
 import { logger } from './utils/logger.util.js';
+import { isCoordinatorAvailable } from './clients/coordinator.client.js';
 import queryRoutes from './routes/query.routes.js';
 import microserviceSupportRoutes from './routes/microserviceSupport.routes.js';
 import recommendationsRoutes from './routes/recommendations.routes.js';
@@ -90,8 +91,37 @@ app.get('/', (req, res) => {
 });
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'rag-microservice' });
+app.get('/health', async (req, res) => {
+  const health = {
+    status: 'ok',
+    service: 'rag-microservice',
+    timestamp: new Date().toISOString(),
+    dependencies: {}
+  };
+  
+  // Check Coordinator gRPC connection
+  try {
+    const isAvailable = await isCoordinatorAvailable();
+    
+    health.dependencies.coordinator = isAvailable ? 'ok' : 'down';
+    
+    if (!isAvailable) {
+      health.status = 'degraded';
+    }
+  } catch (error) {
+    health.dependencies.coordinator = 'error';
+    health.dependencies.coordinator_error = error.message;
+    health.status = 'degraded';
+  }
+  
+  // Check if private key is configured
+  health.dependencies.private_key = process.env.RAG_PRIVATE_KEY ? 'configured' : 'missing';
+  if (!process.env.RAG_PRIVATE_KEY) {
+    health.status = 'degraded';
+  }
+  
+  const statusCode = health.status === 'ok' ? 200 : 503;
+  res.status(statusCode).json(health);
 });
 
 // Handle common browser requests to prevent 404 spam
