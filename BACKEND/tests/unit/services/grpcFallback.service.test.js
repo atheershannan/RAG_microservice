@@ -114,7 +114,7 @@ describe('gRPC Fallback Service', () => {
           'gRPC fallback skipped: Internal data is sufficient',
           expect.any(Object)
         );
-        expect(callCoordinatorRoute)).not.toHaveBeenCalled();
+        expect(callCoordinatorRoute).not.toHaveBeenCalled();
       });
 
       it('should call Coordinator if internal data is insufficient', async () => {
