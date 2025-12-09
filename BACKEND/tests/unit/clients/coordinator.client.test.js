@@ -134,7 +134,7 @@ describe('Coordinator Client', () => {
         query_text: 'test query',
       });
 
-      expect(createGrpcClient).not.toHaveBeenCalled();
+      expect(createGrpcClientSpy).not.toHaveBeenCalled();
       expect(response).toBeNull();
       expect(logger.debug).toHaveBeenCalledWith('Coordinator client disabled');
     });

@@ -231,10 +231,10 @@ describe('gRPC Fallback Service', () => {
         });
 
         expect(processCoordinatorResponseSpy).toHaveBeenCalled();
-        expect(interpretNormalizedFields).toHaveBeenCalledWith(
+        expect(interpretNormalizedFieldsSpy).toHaveBeenCalledWith(
           mockProcessed.normalized_fields
         );
-        expect(createStructuredFields).toHaveBeenCalledWith(
+        expect(createStructuredFieldsSpy).toHaveBeenCalledWith(
           mockProcessed,
           mockInterpreted
         );
