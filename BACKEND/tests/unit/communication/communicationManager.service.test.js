@@ -5,6 +5,21 @@
 
 import { jest } from '@jest/globals';
 
+// Mock modules BEFORE imports (ES modules require this)
+jest.mock('../../../src/clients/coordinator.client.js', () => ({
+  routeRequest: jest.fn(),
+  getMetrics: jest.fn(),
+  isCoordinatorAvailable: jest.fn(),
+  resetClient: jest.fn(),
+  resetMetrics: jest.fn(),
+}));
+
+jest.mock('../../../src/services/coordinatorResponseParser.service.js', () => ({
+  parseRouteResponse: jest.fn(),
+  extractBusinessData: jest.fn(),
+  getRoutingSummary: jest.fn(),
+}));
+
 // Import modules to spy on
 import * as coordinatorClient from '../../../src/clients/coordinator.client.js';
 import * as coordinatorResponseParser from '../../../src/services/coordinatorResponseParser.service.js';
@@ -19,11 +34,20 @@ describe('Communication Manager', () => {
   let routeRequestSpy, parseRouteResponseSpy, extractBusinessDataSpy, getRoutingSummarySpy;
 
   beforeEach(() => {
-    // Spy on module exports (named exports)
-    routeRequestSpy = jest.spyOn(coordinatorClient, 'routeRequest').mockResolvedValue({});
-    parseRouteResponseSpy = jest.spyOn(coordinatorResponseParser, 'parseRouteResponse').mockReturnValue({});
-    extractBusinessDataSpy = jest.spyOn(coordinatorResponseParser, 'extractBusinessData').mockReturnValue({});
-    getRoutingSummarySpy = jest.spyOn(coordinatorResponseParser, 'getRoutingSummary').mockReturnValue({});
+    // Clear all mocks
+    jest.clearAllMocks();
+    
+    // Setup mock return values
+    coordinatorClient.routeRequest.mockResolvedValue({});
+    coordinatorResponseParser.parseRouteResponse.mockReturnValue({});
+    coordinatorResponseParser.extractBusinessData.mockReturnValue({});
+    coordinatorResponseParser.getRoutingSummary.mockReturnValue({});
+    
+    // Store references for assertions
+    routeRequestSpy = coordinatorClient.routeRequest;
+    parseRouteResponseSpy = coordinatorResponseParser.parseRouteResponse;
+    extractBusinessDataSpy = coordinatorResponseParser.extractBusinessData;
+    getRoutingSummarySpy = coordinatorResponseParser.getRoutingSummary;
     
     // Spy on logger methods (object methods)
     jest.spyOn(logger, 'info').mockImplementation(() => {});

@@ -5,6 +5,18 @@
 
 import { jest } from '@jest/globals';
 
+// Mock modules BEFORE imports (ES modules require this)
+jest.mock('../../../src/communication/communicationManager.service.js', () => ({
+  shouldCallCoordinator: jest.fn(),
+  callCoordinatorRoute: jest.fn(),
+  processCoordinatorResponse: jest.fn(),
+}));
+
+jest.mock('../../../src/communication/schemaInterpreter.service.js', () => ({
+  interpretNormalizedFields: jest.fn(),
+  createStructuredFields: jest.fn(),
+}));
+
 // Import modules to spy on
 import * as communicationManager from '../../../src/communication/communicationManager.service.js';
 import * as schemaInterpreter from '../../../src/communication/schemaInterpreter.service.js';
@@ -16,14 +28,24 @@ describe('gRPC Fallback Service', () => {
   let interpretNormalizedFieldsSpy, createStructuredFieldsSpy;
 
   beforeEach(() => {
+    // Clear all mocks
+    jest.clearAllMocks();
+    
     process.env.GRPC_ENABLED = 'true';
     
-    // Spy on module exports (named exports)
-    shouldCallCoordinatorSpy = jest.spyOn(communicationManager, 'shouldCallCoordinator').mockReturnValue(false);
-    callCoordinatorRouteSpy = jest.spyOn(communicationManager, 'callCoordinatorRoute').mockResolvedValue({});
-    processCoordinatorResponseSpy = jest.spyOn(communicationManager, 'processCoordinatorResponse').mockReturnValue({});
-    interpretNormalizedFieldsSpy = jest.spyOn(schemaInterpreter, 'interpretNormalizedFields').mockReturnValue({});
-    createStructuredFieldsSpy = jest.spyOn(schemaInterpreter, 'createStructuredFields').mockReturnValue({});
+    // Setup mock return values
+    communicationManager.shouldCallCoordinator.mockReturnValue(false);
+    communicationManager.callCoordinatorRoute.mockResolvedValue({});
+    communicationManager.processCoordinatorResponse.mockReturnValue({});
+    schemaInterpreter.interpretNormalizedFields.mockReturnValue({});
+    schemaInterpreter.createStructuredFields.mockReturnValue({});
+    
+    // Store references for assertions
+    shouldCallCoordinatorSpy = communicationManager.shouldCallCoordinator;
+    callCoordinatorRouteSpy = communicationManager.callCoordinatorRoute;
+    processCoordinatorResponseSpy = communicationManager.processCoordinatorResponse;
+    interpretNormalizedFieldsSpy = schemaInterpreter.interpretNormalizedFields;
+    createStructuredFieldsSpy = schemaInterpreter.createStructuredFields;
     
     // Spy on logger methods (object methods)
     jest.spyOn(logger, 'info').mockImplementation(() => {});

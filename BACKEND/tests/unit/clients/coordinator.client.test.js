@@ -5,6 +5,12 @@
 
 import { jest } from '@jest/globals';
 
+// Mock modules BEFORE imports (ES modules require this)
+jest.mock('../../../src/clients/grpcClient.util.js', () => ({
+  createGrpcClient: jest.fn(),
+  grpcCall: jest.fn(),
+}));
+
 // Import modules to spy on
 import * as grpcClientUtil from '../../../src/clients/grpcClient.util.js';
 import { routeRequest, getMetrics, isCoordinatorAvailable, resetClient, resetMetrics } from '../../../src/clients/coordinator.client.js';
@@ -16,6 +22,9 @@ describe('Coordinator Client', () => {
   let createGrpcClientSpy, grpcCallSpy;
 
   beforeEach(() => {
+    // Clear all mocks
+    jest.clearAllMocks();
+    
     // Reset client state
     resetClient();
     resetMetrics();
@@ -26,9 +35,13 @@ describe('Coordinator Client', () => {
       close: jest.fn(),
     };
 
-    // Spy on grpcClient.util functions
-    createGrpcClientSpy = jest.spyOn(grpcClientUtil, 'createGrpcClient').mockReturnValue(mockClient);
-    grpcCallSpy = jest.spyOn(grpcClientUtil, 'grpcCall').mockResolvedValue({});
+    // Setup mock return values
+    grpcClientUtil.createGrpcClient.mockReturnValue(mockClient);
+    grpcClientUtil.grpcCall.mockResolvedValue({});
+    
+    // Store references for assertions
+    createGrpcClientSpy = grpcClientUtil.createGrpcClient;
+    grpcCallSpy = grpcClientUtil.grpcCall;
 
     // Spy on logger methods
     jest.spyOn(logger, 'info').mockImplementation(() => {});

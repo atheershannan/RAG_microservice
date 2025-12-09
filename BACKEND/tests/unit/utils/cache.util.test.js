@@ -3,18 +3,49 @@
  */
 
 import { jest } from '@jest/globals';
+
+// Mock redis.config.js BEFORE imports (ES modules require this)
+const mockRedis = {
+  get: jest.fn(),
+  setex: jest.fn(),
+  del: jest.fn(),
+  exists: jest.fn(),
+  status: 'ready',
+};
+
+const mockIsRedisAvailable = jest.fn(() => true);
+
+jest.mock('../../../src/config/redis.config.js', () => ({
+  redis: mockRedis,
+  isRedisAvailable: mockIsRedisAvailable,
+  getRedis: jest.fn(() => mockRedis),
+}));
+
 import { get, set, del, exists } from '../../../src/utils/cache.util.js';
-import { redis } from '../../../src/config/redis.config.js';
+import { redis, isRedisAvailable } from '../../../src/config/redis.config.js';
 
 describe('Cache Utility', () => {
   let getSpy, setexSpy, delSpy, existsSpy;
 
   beforeEach(() => {
-    // Spy on redis methods
-    getSpy = jest.spyOn(redis, 'get').mockResolvedValue(null);
-    setexSpy = jest.spyOn(redis, 'setex').mockResolvedValue('OK');
-    delSpy = jest.spyOn(redis, 'del').mockResolvedValue(1);
-    existsSpy = jest.spyOn(redis, 'exists').mockResolvedValue(0);
+    // Clear all mocks
+    jest.clearAllMocks();
+    
+    // Setup mock return values
+    mockRedis.get.mockResolvedValue(null);
+    mockRedis.setex.mockResolvedValue('OK');
+    mockRedis.del.mockResolvedValue(1);
+    mockRedis.exists.mockResolvedValue(0);
+    mockRedis.status = 'ready';
+    
+    // Mock isRedisAvailable to return true
+    mockIsRedisAvailable.mockReturnValue(true);
+    
+    // Store references for assertions
+    getSpy = mockRedis.get;
+    setexSpy = mockRedis.setex;
+    delSpy = mockRedis.del;
+    existsSpy = mockRedis.exists;
   });
 
   afterEach(() => {
