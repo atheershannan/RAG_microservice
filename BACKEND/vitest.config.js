@@ -10,7 +10,7 @@ export default defineConfig({
     globals: true, // Enable global test functions (describe, it, expect, etc.)
     environment: 'node',
     include: ['tests/**/*.test.js'],
-    exclude: ['node_modules', 'dist'],
+    exclude: ['node_modules', 'dist', '**/dist/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
