@@ -6,20 +6,17 @@
 import { jest } from '@jest/globals';
 
 // Mock modules BEFORE imports (ES modules require this)
-jest.mock('../../../src/clients/grpcClient.util.js', () => ({
-  createGrpcClient: jest.fn(),
-  grpcCall: jest.fn(),
-}));
+jest.mock('../../../src/clients/grpcClient.util.js');
+jest.mock('../../../src/utils/logger.util.js');
 
-// Import modules to spy on
-import * as grpcClientUtil from '../../../src/clients/grpcClient.util.js';
+// Import AFTER mocks
+import { createGrpcClient, grpcCall } from '../../../src/clients/grpcClient.util.js';
 import { routeRequest, getMetrics, isCoordinatorAvailable, resetClient, resetMetrics } from '../../../src/clients/coordinator.client.js';
 import { logger } from '../../../src/utils/logger.util.js';
 import * as grpc from '@grpc/grpc-js';
 
 describe('Coordinator Client', () => {
   let mockClient;
-  let createGrpcClientSpy, grpcCallSpy;
 
   beforeEach(() => {
     // Clear all mocks
@@ -35,13 +32,9 @@ describe('Coordinator Client', () => {
       close: jest.fn(),
     };
 
-    // Setup mock return values
-    grpcClientUtil.createGrpcClient.mockReturnValue(mockClient);
-    grpcClientUtil.grpcCall.mockResolvedValue({});
-    
-    // Store references for assertions
-    createGrpcClientSpy = grpcClientUtil.createGrpcClient;
-    grpcCallSpy = grpcClientUtil.grpcCall;
+    // Setup default mock returns
+    createGrpcClient.mockReturnValue(mockClient);
+    grpcCall.mockResolvedValue({});
 
     // Spy on logger methods
     jest.spyOn(logger, 'info').mockImplementation(() => {});
@@ -75,7 +68,7 @@ describe('Coordinator Client', () => {
         query_text: 'test query',
       });
 
-      expect(createGrpcClientSpy).toHaveBeenCalledWith(
+      expect(createGrpcClient).toHaveBeenCalledWith(
         expect.stringContaining('test-coordinator:50051'),
         expect.stringContaining('coordinator.proto'),
         'rag.v1.CoordinatorService'
@@ -92,7 +85,7 @@ describe('Coordinator Client', () => {
         query_text: 'test query',
       });
 
-      expect(createGrpcClientSpy).toHaveBeenCalledWith(
+      expect(createGrpcClient).toHaveBeenCalledWith(
         'custom-host:9999',
         expect.any(String),
         expect.any(String)
@@ -108,7 +101,7 @@ describe('Coordinator Client', () => {
         query_text: 'test query',
       });
 
-      expect(createGrpcClientSpy).toHaveBeenCalledWith(
+      expect(createGrpcClient).toHaveBeenCalledWith(
         'localhost:50051',
         expect.any(String),
         expect.any(String)
@@ -125,7 +118,7 @@ describe('Coordinator Client', () => {
         query_text: 'test query 1',
       });
 
-      const firstCallCount = createGrpcClientSpy.mock.calls.length;
+      const firstCallCount = createGrpcClient.mock.calls.length;
 
       // Second call
       await routeRequest({
@@ -135,7 +128,7 @@ describe('Coordinator Client', () => {
       });
 
       // Should not create new client
-      expect(createGrpcClientSpy.mock.calls.length).toBe(firstCallCount);
+      expect(createGrpcClient.mock.calls.length).toBe(firstCallCount);
     });
 
     it('should not create client if COORDINATOR_ENABLED is false', async () => {
@@ -147,14 +140,14 @@ describe('Coordinator Client', () => {
         query_text: 'test query',
       });
 
-      expect(createGrpcClientSpy).not.toHaveBeenCalled();
+      expect(createGrpcClient).not.toHaveBeenCalled();
       expect(response).toBeNull();
       expect(logger.debug).toHaveBeenCalledWith('Coordinator client disabled');
     });
 
     it('should handle client creation errors gracefully', async () => {
       process.env.COORDINATOR_ENABLED = 'true';
-      createGrpcClientSpy.mockImplementation(() => {
+      createGrpcClient.mockImplementation(() => {
         throw new Error('Failed to create client');
       });
 
@@ -188,7 +181,7 @@ describe('Coordinator Client', () => {
         },
       };
 
-      grpcCallSpy.mockResolvedValue(mockResponse);
+      grpcCall.mockResolvedValue(mockResponse);
 
       await routeRequest({
         tenant_id: 'test-tenant-123',
@@ -200,7 +193,7 @@ describe('Coordinator Client', () => {
         },
       });
 
-      expect(grpcCallSpy).toHaveBeenCalledWith(
+      expect(grpcCall).toHaveBeenCalledWith(
         mockClient,
         'Route',
         {
@@ -238,7 +231,7 @@ describe('Coordinator Client', () => {
         }),
       };
 
-      grpcCallSpy.mockResolvedValue(mockResponse);
+      grpcCall.mockResolvedValue(mockResponse);
 
       const response = await routeRequest({
         tenant_id: 'test-tenant',
@@ -267,7 +260,7 @@ describe('Coordinator Client', () => {
         },
       };
 
-      grpcCallSpy.mockResolvedValue(mockResponse);
+      grpcCall.mockResolvedValue(mockResponse);
 
       await routeRequest({
         tenant_id: 'test-tenant',
@@ -292,7 +285,7 @@ describe('Coordinator Client', () => {
         },
       };
 
-      grpcCallSpy.mockResolvedValue(mockResponse);
+      grpcCall.mockResolvedValue(mockResponse);
 
       await routeRequest({
         tenant_id: 'test-tenant',
@@ -335,7 +328,7 @@ describe('Coordinator Client', () => {
     });
 
     it('should handle null response gracefully', async () => {
-      grpcCallSpy.mockResolvedValue(null);
+      grpcCall.mockResolvedValue(null);
 
       const response = await routeRequest({
         tenant_id: 'test-tenant',
@@ -363,7 +356,7 @@ describe('Coordinator Client', () => {
       const timeoutError = new Error('Request timed out');
       timeoutError.code = grpc.status.DEADLINE_EXCEEDED;
 
-      grpcCallSpy.mockRejectedValue(timeoutError);
+      grpcCall.mockRejectedValue(timeoutError);
 
       const response = await routeRequest({
         tenant_id: 'test-tenant',
@@ -388,7 +381,7 @@ describe('Coordinator Client', () => {
       const unavailableError = new Error('Service unavailable');
       unavailableError.code = grpc.status.UNAVAILABLE;
 
-      grpcCallSpy.mockRejectedValue(unavailableError);
+      grpcCall.mockRejectedValue(unavailableError);
 
       const response = await routeRequest({
         tenant_id: 'test-tenant',
@@ -413,7 +406,7 @@ describe('Coordinator Client', () => {
       const notFoundError = new Error('Service not found');
       notFoundError.code = grpc.status.NOT_FOUND;
 
-      grpcCallSpy.mockRejectedValue(notFoundError);
+      grpcCall.mockRejectedValue(notFoundError);
 
       const response = await routeRequest({
         tenant_id: 'test-tenant',
@@ -435,7 +428,7 @@ describe('Coordinator Client', () => {
       const invalidError = new Error('Invalid argument');
       invalidError.code = grpc.status.INVALID_ARGUMENT;
 
-      grpcCallSpy.mockRejectedValue(invalidError);
+      grpcCall.mockRejectedValue(invalidError);
 
       const response = await routeRequest({
         tenant_id: 'test-tenant',
@@ -456,7 +449,7 @@ describe('Coordinator Client', () => {
       const internalError = new Error('Internal error');
       internalError.code = grpc.status.INTERNAL;
 
-      grpcCallSpy.mockRejectedValue(internalError);
+      grpcCall.mockRejectedValue(internalError);
 
       const response = await routeRequest({
         tenant_id: 'test-tenant',
@@ -477,7 +470,7 @@ describe('Coordinator Client', () => {
       const unknownError = new Error('Unknown error');
       unknownError.code = 999; // Unknown code
 
-      grpcCallSpy.mockRejectedValue(unknownError);
+      grpcCall.mockRejectedValue(unknownError);
 
       const response = await routeRequest({
         tenant_id: 'test-tenant',
@@ -498,7 +491,7 @@ describe('Coordinator Client', () => {
       const timeoutError = new Error('Timeout');
       timeoutError.code = grpc.status.DEADLINE_EXCEEDED;
 
-      grpcCallSpy.mockRejectedValue(timeoutError);
+      grpcCall.mockRejectedValue(timeoutError);
 
       await routeRequest({
         tenant_id: 'test-tenant',
@@ -517,7 +510,7 @@ describe('Coordinator Client', () => {
       };
 
       // Simulate delay
-      grpcCallSpy.mockImplementation(() => {
+      grpcCall.mockImplementation(() => {
         return new Promise((resolve) => {
           setTimeout(() => resolve(mockResponse), 100);
         });
@@ -545,7 +538,7 @@ describe('Coordinator Client', () => {
         normalized_fields: { successful_service: 'payment-service' },
       };
 
-      grpcCallSpy.mockResolvedValue(mockResponse);
+      grpcCall.mockResolvedValue(mockResponse);
 
       await routeRequest({
         tenant_id: 'test-tenant',
@@ -554,7 +547,7 @@ describe('Coordinator Client', () => {
       });
 
       // Should convert seconds to milliseconds
-      expect(grpcCallSpy).toHaveBeenCalledWith(
+      expect(grpcCall).toHaveBeenCalledWith(
         expect.any(Object),
         'Route',
         expect.any(Object),
@@ -572,7 +565,7 @@ describe('Coordinator Client', () => {
         normalized_fields: { successful_service: 'payment-service' },
       };
 
-      grpcCallSpy.mockResolvedValue(mockResponse);
+      grpcCall.mockResolvedValue(mockResponse);
 
       await routeRequest({
         tenant_id: 'test-tenant',
@@ -580,7 +573,7 @@ describe('Coordinator Client', () => {
         query_text: 'test query',
       });
 
-      expect(grpcCallSpy).toHaveBeenCalledWith(
+      expect(grpcCall).toHaveBeenCalledWith(
         expect.any(Object),
         'Route',
         expect.any(Object),
@@ -601,7 +594,7 @@ describe('Coordinator Client', () => {
         normalized_fields: { successful_service: 'payment-service', rank_used: '1' },
       };
 
-      grpcCallSpy.mockResolvedValue(mockResponse);
+      grpcCall.mockResolvedValue(mockResponse);
 
       // 2 successful requests
       await routeRequest({
@@ -616,7 +609,7 @@ describe('Coordinator Client', () => {
       });
 
       // 1 failed request
-      grpcCallSpy.mockRejectedValue(new Error('Error'));
+      grpcCall.mockRejectedValue(new Error('Error'));
       await routeRequest({
         tenant_id: 'test-tenant',
         user_id: 'test-user',
@@ -632,7 +625,7 @@ describe('Coordinator Client', () => {
 
     it('should calculate fallback rate', async () => {
       // Primary success
-      grpcCallSpy.mockResolvedValueOnce({
+      grpcCall.mockResolvedValueOnce({
         target_services: ['payment-service'],
         normalized_fields: { successful_service: 'payment-service', rank_used: '1' },
       });
@@ -644,7 +637,7 @@ describe('Coordinator Client', () => {
       });
 
       // Fallback success
-      grpcCallSpy.mockResolvedValueOnce({
+      grpcCall.mockResolvedValueOnce({
         target_services: ['payment-service', 'billing-service'],
         normalized_fields: { successful_service: 'billing-service', rank_used: '2' },
       });
@@ -685,7 +678,7 @@ describe('Coordinator Client', () => {
 
     it('should return false if client creation failed', async () => {
       process.env.COORDINATOR_ENABLED = 'true';
-      createGrpcClientSpy.mockImplementation(() => {
+      createGrpcClient.mockImplementation(() => {
         throw new Error('Failed');
       });
 

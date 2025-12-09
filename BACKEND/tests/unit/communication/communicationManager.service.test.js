@@ -6,48 +6,28 @@
 import { jest } from '@jest/globals';
 
 // Mock modules BEFORE imports (ES modules require this)
-jest.mock('../../../src/clients/coordinator.client.js', () => ({
-  routeRequest: jest.fn(),
-  getMetrics: jest.fn(),
-  isCoordinatorAvailable: jest.fn(),
-  resetClient: jest.fn(),
-  resetMetrics: jest.fn(),
-}));
+jest.mock('../../../src/clients/coordinator.client.js');
+jest.mock('../../../src/services/coordinatorResponseParser.service.js');
+jest.mock('../../../src/utils/logger.util.js');
 
-jest.mock('../../../src/services/coordinatorResponseParser.service.js', () => ({
-  parseRouteResponse: jest.fn(),
-  extractBusinessData: jest.fn(),
-  getRoutingSummary: jest.fn(),
-}));
-
-// Import modules to spy on
-import * as coordinatorClient from '../../../src/clients/coordinator.client.js';
-import * as coordinatorResponseParser from '../../../src/services/coordinatorResponseParser.service.js';
+// Import AFTER mocks
+import { routeRequest, isCoordinatorAvailable } from '../../../src/clients/coordinator.client.js';
+import {
+  parseRouteResponse,
+  extractBusinessData,
+  getRoutingSummary,
+} from '../../../src/services/coordinatorResponseParser.service.js';
+import { logger } from '../../../src/utils/logger.util.js';
 import {
   shouldCallCoordinator,
   callCoordinatorRoute,
   processCoordinatorResponse,
 } from '../../../src/communication/communicationManager.service.js';
-import { logger } from '../../../src/utils/logger.util.js';
 
 describe('Communication Manager', () => {
-  let routeRequestSpy, parseRouteResponseSpy, extractBusinessDataSpy, getRoutingSummarySpy;
-
   beforeEach(() => {
     // Clear all mocks
     jest.clearAllMocks();
-    
-    // Setup mock return values
-    coordinatorClient.routeRequest.mockResolvedValue({});
-    coordinatorResponseParser.parseRouteResponse.mockReturnValue({});
-    coordinatorResponseParser.extractBusinessData.mockReturnValue({});
-    coordinatorResponseParser.getRoutingSummary.mockReturnValue({});
-    
-    // Store references for assertions
-    routeRequestSpy = coordinatorClient.routeRequest;
-    parseRouteResponseSpy = coordinatorResponseParser.parseRouteResponse;
-    extractBusinessDataSpy = coordinatorResponseParser.extractBusinessData;
-    getRoutingSummarySpy = coordinatorResponseParser.getRoutingSummary;
     
     // Spy on logger methods (object methods)
     jest.spyOn(logger, 'info').mockImplementation(() => {});
@@ -196,7 +176,7 @@ describe('Communication Manager', () => {
         normalized_fields: { successful_service: 'payment-service' },
       };
 
-      routeRequestSpy.mockResolvedValue(mockResponse);
+      routeRequest.mockResolvedValue(mockResponse);
 
       const result = await callCoordinatorRoute({
         tenant_id: 'org-123',
@@ -205,7 +185,7 @@ describe('Communication Manager', () => {
         metadata: { category: 'payment' },
       });
 
-      expect(routeRequestSpy).toHaveBeenCalledWith({
+      expect(routeRequest).toHaveBeenCalledWith({
         tenant_id: 'org-123',
         user_id: 'user-456',
         query_text: 'test query',
@@ -224,7 +204,7 @@ describe('Communication Manager', () => {
     });
 
     it('should handle null response', async () => {
-      routeRequestSpy.mockResolvedValue(null);
+      routeRequest.mockResolvedValue(null);
 
       const result = await callCoordinatorRoute({
         tenant_id: 'org-123',
@@ -241,7 +221,7 @@ describe('Communication Manager', () => {
 
     it('should handle errors gracefully', async () => {
       const error = new Error('Network error');
-      routeRequestSpy.mockRejectedValue(error);
+      routeRequest.mockRejectedValue(error);
 
       const result = await callCoordinatorRoute({
         tenant_id: 'org-123',
@@ -259,7 +239,7 @@ describe('Communication Manager', () => {
     });
 
     it('should add timestamp and source to metadata', async () => {
-      routeRequestSpy.mockResolvedValue({});
+      routeRequest.mockResolvedValue({});
 
       await callCoordinatorRoute({
         tenant_id: 'org-123',
@@ -268,7 +248,7 @@ describe('Communication Manager', () => {
         metadata: { custom: 'value' },
       });
 
-      expect(routeRequestSpy).toHaveBeenCalledWith({
+      expect(routeRequest).toHaveBeenCalledWith({
         tenant_id: 'org-123',
         user_id: 'user-456',
         query_text: 'test query',
@@ -328,17 +308,17 @@ describe('Communication Manager', () => {
       };
 
       beforeEach(() => {
-        parseRouteResponseSpy.mockReturnValue(mockParsedResponse);
-        extractBusinessDataSpy.mockReturnValue(mockBusinessData);
-        getRoutingSummarySpy.mockReturnValue(mockRoutingSummary);
+        parseRouteResponse.mockReturnValue(mockParsedResponse);
+        extractBusinessData.mockReturnValue(mockBusinessData);
+        getRoutingSummary.mockReturnValue(mockRoutingSummary);
       });
 
       it('should process successful primary response', () => {
         const processed = processCoordinatorResponse(mockCoordinatorResponse);
 
-        expect(parseRouteResponseSpy).toHaveBeenCalledWith(mockCoordinatorResponse);
-        expect(extractBusinessDataSpy).toHaveBeenCalledWith(mockParsedResponse);
-        expect(getRoutingSummarySpy).toHaveBeenCalledWith(mockParsedResponse);
+        expect(parseRouteResponse).toHaveBeenCalledWith(mockCoordinatorResponse);
+        expect(extractBusinessData).toHaveBeenCalledWith(mockParsedResponse);
+        expect(getRoutingSummary).toHaveBeenCalledWith(mockParsedResponse);
 
         expect(processed).toBeDefined();
         expect(processed.status).toBe('success_primary');
@@ -395,9 +375,9 @@ describe('Communication Manager', () => {
       };
 
       beforeEach(() => {
-        parseRouteResponseSpy.mockReturnValue(mockParsedResponse);
-        extractBusinessDataSpy.mockReturnValue(mockBusinessData);
-        getRoutingSummarySpy.mockReturnValue({
+        parseRouteResponse.mockReturnValue(mockParsedResponse);
+        extractBusinessData.mockReturnValue(mockBusinessData);
+        getRoutingSummary.mockReturnValue({
           status: 'success_fallback',
           message: 'Success at fallback service',
         });
@@ -443,9 +423,9 @@ describe('Communication Manager', () => {
       };
 
       beforeEach(() => {
-        parseRouteResponseSpy.mockReturnValue(mockParsedResponse);
-        extractBusinessDataSpy.mockReturnValue(mockBusinessData);
-        getRoutingSummarySpy.mockReturnValue({
+        parseRouteResponse.mockReturnValue(mockParsedResponse);
+        extractBusinessData.mockReturnValue(mockBusinessData);
+        getRoutingSummary.mockReturnValue({
           status: 'all_failed',
           message: 'All services failed',
         });
@@ -469,7 +449,7 @@ describe('Communication Manager', () => {
       });
 
       it('should return null if parsing fails', () => {
-        parseRouteResponseSpy.mockReturnValue(null);
+        parseRouteResponse.mockReturnValue(null);
 
         const processed = processCoordinatorResponse({});
 
@@ -480,7 +460,7 @@ describe('Communication Manager', () => {
       });
 
       it('should handle processing errors gracefully', () => {
-        parseRouteResponseSpy.mockImplementation(() => {
+        parseRouteResponse.mockImplementation(() => {
           throw new Error('Parse error');
         });
 
@@ -521,9 +501,9 @@ describe('Communication Manager', () => {
           message: 'Success',
         };
 
-        parseRouteResponseSpy.mockReturnValue(mockParsed);
-        extractBusinessDataSpy.mockReturnValue(mockBusinessData);
-        getRoutingSummarySpy.mockReturnValue(mockSummary);
+        parseRouteResponse.mockReturnValue(mockParsed);
+        extractBusinessData.mockReturnValue(mockBusinessData);
+        getRoutingSummary.mockReturnValue(mockSummary);
 
         const processed = processCoordinatorResponse({});
 
