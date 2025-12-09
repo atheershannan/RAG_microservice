@@ -31,7 +31,7 @@ export function interpretNormalizedFields(normalizedFields = {}) {
       if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
         try {
           parsedValue = JSON.parse(value);
-        } catch (e) {
+        } catch (_e) {
           // Keep as string if parsing fails
           parsedValue = value;
         }

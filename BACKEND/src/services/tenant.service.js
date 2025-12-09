@@ -93,7 +93,7 @@ export async function getOrCreateTenant(domainOrTenantId) {
               ...tenantData,
             },
           });
-        } catch (upsertError) {
+        } catch (_upsertError) {
           // If upsert fails, try to find existing tenant
           tenant = await prisma.tenant.findUnique({
             where: { id: tenantId },

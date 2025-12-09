@@ -38,6 +38,11 @@ export default [
         __dirname: 'readonly',
         __filename: 'readonly',
         global: 'readonly',
+        URL: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
         // Vitest globals
         describe: 'readonly',
         it: 'readonly',
@@ -52,7 +57,14 @@ export default [
     },
     rules: {
       'no-console': ['warn', { allow: ['warn', 'error'] }],
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
       'prefer-const': 'error',
       'no-var': 'error',
     },

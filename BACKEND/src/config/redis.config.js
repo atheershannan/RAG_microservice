@@ -39,7 +39,7 @@ if (redisEnabled) {
         // Disconnect and stop trying
         try {
           redis.disconnect();
-        } catch (e) {
+        } catch (_e) {
           // Ignore disconnect errors
         }
         redis = null;
@@ -64,7 +64,7 @@ if (redisEnabled) {
         logger.warn('Redis connection timeout. Service will continue without Redis cache.');
         try {
           redis.disconnect();
-        } catch (e) {
+        } catch (_e) {
           // Ignore disconnect errors
         }
         redis = null;
@@ -80,7 +80,7 @@ if (redisEnabled) {
       if (redis) {
         try {
           redis.disconnect();
-        } catch (e) {
+        } catch (_e) {
           // Ignore disconnect errors
         }
         redis = null;

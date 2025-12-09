@@ -64,7 +64,7 @@ export function verifySignature(microserviceName, signature, publicKey, payload 
   
   try {
     return verify.verify(publicKey, signature, 'base64');
-  } catch (error) {
+  } catch (_error) {
     // Invalid signature format or key
     return false;
   }

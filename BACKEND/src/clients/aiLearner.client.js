@@ -31,7 +31,7 @@ const getGrpcUrl = () => {
       const url = new URL(urlStr);
       // Default gRPC port is usually 50051, but can be configured
       return `${url.hostname}:${process.env.AI_LEARNER_GRPC_PORT || '50051'}`;
-    } catch (error) {
+    } catch (_error) {
       // If URL parsing fails, try to extract hostname manually
       const hostname = httpUrl.replace(/^https?:\/\//, '').split('/')[0].split(':')[0];
       return `${hostname}:${process.env.AI_LEARNER_GRPC_PORT || '50051'}`;

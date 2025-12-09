@@ -98,7 +98,7 @@ function validateMessages() {
     MESSAGES.error.tenant();
     
     return true;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 }

@@ -48,7 +48,7 @@ function safeSerialize(data, seen = new WeakSet()) {
           continue;
         }
         cleaned[key] = safeSerialize(value, seen);
-      } catch (e) {
+      } catch (_e) {
         // If serialization fails, convert to string
         cleaned[key] = String(value);
       }

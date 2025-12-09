@@ -161,7 +161,7 @@ export function resetClient() {
   if (grpcClient) {
     try {
       grpcClient.close();
-    } catch (error) {
+    } catch (_error) {
       // Ignore close errors
     }
   }

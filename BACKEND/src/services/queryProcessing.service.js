@@ -1625,7 +1625,7 @@ ${personalizationContext ? `\nPersonalization hints: ${personalizationContext}` 
           query,
         },
       });
-    } catch (auditError) {
+    } catch (_auditError) {
       // Ignore audit errors
     }
 

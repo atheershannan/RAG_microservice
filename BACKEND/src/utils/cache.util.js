@@ -18,7 +18,7 @@ async function get(key) {
   try {
     const value = await redis.get(key);
     return value ? JSON.parse(value) : null;
-  } catch (error) {
+  } catch (_error) {
     // Silently fail - Redis is optional
     return null;
   }
@@ -38,7 +38,7 @@ async function set(key, value, ttlSeconds = 3600) {
   try {
     await redis.setex(key, ttlSeconds, JSON.stringify(value));
     return true;
-  } catch (error) {
+  } catch (_error) {
     // Silently fail - Redis is optional
     return false;
   }
@@ -56,7 +56,7 @@ async function del(key) {
   try {
     await redis.del(key);
     return true;
-  } catch (error) {
+  } catch (_error) {
     // Silently fail - Redis is optional
     return false;
   }
@@ -74,7 +74,7 @@ async function exists(key) {
   try {
     const result = await redis.exists(key);
     return result === 1;
-  } catch (error) {
+  } catch (_error) {
     // Silently fail - Redis is optional
     return false;
   }
