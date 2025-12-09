@@ -57,14 +57,18 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.6",
-    "eslint": "^9.0.0",
+    "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-node": "^11.1.0",
     "vitest": "^2.0.0",
     "prettier": "^3.1.1",
     "prisma": "^5.8.0",
     "@playwright/test": "^1.40.0",
-    "supertest": "^6.3.3"
+    "supertest": "^6.3.3",
+    "js-yaml": "^4.1.1"
+  },
+  "overrides": {
+    "js-yaml": "^4.1.1"
   },
   "prisma": {
     "seed": "node ../DATABASE/prisma/seed.js"
