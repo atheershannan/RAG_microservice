@@ -54,7 +54,7 @@ services:
 
   # Kafka message queue
   kafka:
-    image: bitnami/kafka:3.6.0
+    image: bitnami/kafka:latest
     container_name: rag_kafka
     restart: unless-stopped
     ports:
