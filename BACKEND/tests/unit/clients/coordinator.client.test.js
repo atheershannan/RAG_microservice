@@ -3,7 +3,7 @@
  * Tests for gRPC client initialization, connection handling, and Route() method calls
  */
 
-import { jest } from '@jest/globals';
+import { vi as jest } from 'vitest';
 
 // CRITICAL: Named exports with inline factory functions
 jest.mock('../../../src/clients/grpcClient.util.js', () => ({

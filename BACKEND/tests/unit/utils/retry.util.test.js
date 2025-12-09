@@ -2,7 +2,7 @@
  * Retry utility tests
  */
 
-import { jest } from '@jest/globals';
+import { vi as jest } from 'vitest';
 import { retry, sleep } from '../../../src/utils/retry.util.js';
 
 describe('Retry Utility', () => {

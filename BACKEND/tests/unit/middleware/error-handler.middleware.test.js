@@ -2,7 +2,7 @@
  * Error handler middleware tests
  */
 
-import { jest } from '@jest/globals';
+import { vi as jest } from 'vitest';
 import { errorHandler, notFoundHandler } from '../../../src/middleware/error-handler.middleware.js';
 
 describe('Error Handler Middleware', () => {

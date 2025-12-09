@@ -3,7 +3,7 @@
  * Tests for parsing RouteResponse, extracting business data, and handling all scenarios
  */
 
-import { jest } from '@jest/globals';
+import { vi as jest } from 'vitest';
 
 import {
   parseRouteResponse,

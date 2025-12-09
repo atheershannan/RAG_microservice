@@ -3,7 +3,7 @@
  * Tests for decision logic, Coordinator integration, and response processing
  */
 
-import { jest } from '@jest/globals';
+import { vi as jest } from 'vitest';
 
 // CRITICAL: Named exports with inline factory functions
 jest.mock('../../../src/clients/coordinator.client.js', () => ({

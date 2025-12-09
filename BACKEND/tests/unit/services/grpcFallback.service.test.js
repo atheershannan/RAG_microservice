@@ -3,7 +3,7 @@
  * Tests for RAG pipeline integration with Coordinator
  */
 
-import { jest } from '@jest/globals';
+import { vi as jest } from 'vitest';
 
 // CRITICAL: Named exports with inline factory functions
 jest.mock('../../../src/communication/communicationManager.service.js', () => ({

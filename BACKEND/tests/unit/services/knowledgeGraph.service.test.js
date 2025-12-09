@@ -3,7 +3,7 @@
  * Tests for KG integration functions
  */
 
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { 
   findRelatedNodes, 
   boostResultsByKG,

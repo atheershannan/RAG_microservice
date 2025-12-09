@@ -2,7 +2,7 @@
  * Cache utility tests
  */
 
-import { jest } from '@jest/globals';
+import { vi as jest } from 'vitest';
 
 // CRITICAL: Factory function returns named exports
 jest.mock('../../../src/config/redis.config.js', () => {

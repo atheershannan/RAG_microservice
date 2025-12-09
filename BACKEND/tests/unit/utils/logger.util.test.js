@@ -2,7 +2,7 @@
  * Logger utility tests
  */
 
-import { jest } from '@jest/globals';
+import { vi as jest } from 'vitest';
 import { logger } from '../../../src/utils/logger.util.js';
 
 describe('Logger Utility', () => {
