@@ -3,12 +3,12 @@
  * Migration from .eslintrc.cjs to flat config format
  */
 
-import eslint from '@eslint/js';
+import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 
 export default [
   // Base recommended rules
-  eslint.configs.recommended,
+  js.configs.recommended,
   
   // Prettier integration (must be last)
   prettier,
